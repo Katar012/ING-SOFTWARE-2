@@ -21,6 +21,6 @@ La propuesta sigue el modelo **arc42**, el cual estructura la documentación arq
 ## Universidad Autonoma de Occidente
 
 <div align="center">
-    <img src="../../recursos/imagenes/UAO-LOGO.png" alt="UAO LOGO" width="300"/>
+    <img src="../recursos/imagenes/UAO-LOGO.png" alt="UAO LOGO" width="300"/>
 </div>
 
