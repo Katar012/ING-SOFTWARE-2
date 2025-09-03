@@ -1,117 +1,140 @@
 ## 7. Tácticas para Garantizar Atributos de Calidad
 
-ÉPICA 1: Experiencia Unificada de Cliente
+### ÉPICA 1: Consulta de Saldos y Pagos en Línea
+
+## HU1.1 – Consulta de saldos como ciudadano
+
+Como ciudadano registrado,
+quiero consultar mi saldo pendiente en servicios municipales (ej: agua, predial, etc.),
+para saber cuánto debo pagar y en qué fecha.
+Criterios de aceptación:
+
+El sistema debe mostrar el detalle del saldo por servicio.
+
+El sistema debe permitir consultar el historial de pagos.
+
+El sistema debe validar la identidad del usuario.
+
+## HU1.2 – Realización de pagos como ciudadano
+
+Como ciudadano registrado,
+quiero poder pagar mis servicios municipales en línea,
+para cumplir mis obligaciones sin tener que desplazarme.
+Criterios de aceptación:
+
+Deben habilitarse medios de pago PSE, tarjeta crédito/débito y billeteras digitales.
+
+Debe generarse confirmación del pago vía correo o notificación.
+
+El pago debe reflejarse en tiempo real en el mainframe.
+
+## HU1.3 – Consulta de pagos como operador interno
+
+Como operador interno,
+quiero ver los pagos realizados por los ciudadanos,
+para poder hacer seguimiento y conciliación.
+Criterios de aceptación:
+
+El sistema debe permitir filtros por fecha, servicio, estado del pago.
+
+Los datos deben obtenerse en tiempo real del mainframe.
+
+Solo usuarios autorizados pueden acceder a esta información.
+
+### ÉPICA 2: Integridad de Datos y Acceso Seguro
+
+## HU2.1 – Validación de autenticidad de datos
+
+Como administrador del sistema,
+quiero asegurarme de que los datos que consultan los usuarios provienen del sistema oficial,
+para garantizar la transparencia y evitar fraudes.
+Criterios de aceptación:
+
+El sistema debe mostrar un sello o verificación de integridad.
+
+Todos los datos deben ser obtenidos a través de una capa anticorrupción validada.
+
+Deben registrarse logs de acceso a datos.
+
+## HU2.2 – Acceso seguro a través de autenticación multifactor (MFA)
 
 Como ciudadano,
-quiero una vista consolidada de mis saldos, pagos y reporte de fallas desde un único portal o app,
-para gestionar mis servicios públicos sin fragmentación.
-
-Valor de negocio: Mejora la satisfacción del cliente y reduce consultas al call center.
-
-Criterios de aceptación de épica:
-
-Acceso consolidado desde un solo punto (portal/app).
-
-Visualización de saldos, pagos e incidencias en una interfaz uniforme.
-
-Respuesta actualizada y confiable.
-
-Estimación: S (Pequeña)
-
-Prioridad: 1 (Alta)
-
-Historias de Usuario asociadas:
-
-## HISTORIA DE USUARIO: HU‑1 – Consulta Unificada de Saldos
-Como ciudadano autenticado,
-quiero consultar mis saldos pendientes de energía, agua y telecomunicaciones,
-para ver mis obligaciones financieras desde una única vista.
-
+quiero acceder al sistema con doble verificación,
+para proteger mi información personal y financiera.
 Criterios de aceptación:
 
-DADO QUE estoy autenticado
-CUANDO accedo a la sección de saldos
-ENTONCES veo el total y el desglose por servicio
+El sistema debe permitir autenticación por correo, SMS o app.
 
-Y DADO QUE algún sistema legado está fuera de servicio
-CUANDO intento consultar ese saldo
-ENTONCES veo un mensaje de “Saldo no disponible temporalmente”
+El sistema debe revocar accesos después de múltiples intentos fallidos.
 
-Definición de terminado:
+El MFA debe estar disponible en web y app móvil.
 
-[x] Código revisado
+### ÉPICA 3: Soporte Técnico y Gestión de Fallas
 
-[x] Pruebas unitarias pasadas
+## HU3.1 – Reporte de fallas como técnico de campo
 
-[x] Pruebas de aceptación superadas
-
-[x] Documentación actualizada
-
-Estimación: 5 Story Points
-Prioridad: Alta
-Dependencias: HU‑2 (Pago en Línea), integración con sistemas legados
-
-## HISTORIA DE USUARIO: HU‑2 – Pago en Línea Unificado
-Como ciudadano,
-quiero pagar uno o más servicios desde el portal/app,
-para saldar mis deudas de una sola vez.
-
+Como técnico de campo,
+quiero reportar una falla directamente desde la app móvil,
+para que el sistema la registre y el área correspondiente tome acción rápidamente.
 Criterios de aceptación:
 
-DADO QUE tengo saldos pendientes
-CUANDO selecciono servicios y completo el pago
-ENTONCES recibo comprobante y saldo se actualiza
+El reporte debe incluir ubicación GPS, foto y tipo de falla.
 
-Y DADO QUE el pago falla
-CUANDO finaliza el intento
-ENTONCES recibo notificación de error y puedo reintentar
+El reporte debe estar asociado a un ticket con seguimiento.
 
-Definición de terminado: igual HU‑1
-Estimación: 8 SP
-Prioridad: Alta
-Dependencias: HU‑1, pasarela de pagos
+El sistema debe estar disponible sin conexión, sincronizando al reconectarse.
 
-## HISTORIA DE USUARIO: HU‑3 – Reporte de Fallas
-Como ciudadano,
-quiero reportar fallas con geolocalización y descripción,
-para que el sistema genere un ticket y pueda hacer seguimiento.
+## HU3.2 – Seguimiento de fallas como operador
 
+Como operador interno,
+quiero ver todos los reportes de fallas y su estado,
+para asignarlos y hacer trazabilidad en tiempo real.
 Criterios de aceptación:
 
-DADO QUE informo una falla
-CUANDO la envío
-ENTONCES se crea ticket asociado al servicio y confirmación llega al usuario
+El sistema debe permitir actualizar el estado del ticket.
 
-Estimación: 5 SP
-Prioridad: Alta
-Dependencias: HU‑1, sistema de tickets interno
+El sistema debe mostrar un dashboard con métricas por zona y tipo.
 
-## HISTORIA DE USUARIO: HU‑4 – Notificaciones Automáticas
-Como ciudadano,
-quiero recibir notificaciones (SMS, email, push) sobre eventos relevantes,
-para estar informado sin necesidad de revisar el portal/app.
+Solo operadores autorizados pueden modificar tickets.
 
+### ÉPICA 4: Administración del Sistema
+
+## HU4.1 – Creación y gestión de roles de usuarios
+
+Como administrador,
+quiero crear y asignar roles con permisos específicos,
+para garantizar que cada usuario solo acceda a lo que le corresponde.
 Criterios de aceptación:
 
-DADO QUE ocurre un evento relevante (pago, corte, falla)
-CUANDO sucede
-ENTONCES recibo notificación según mis preferencias
+El sistema debe permitir CRUD de roles.
 
-Estimación: 5 SP
-Prioridad: Media
-Dependencias: HU‑2, HU‑3
+Cada funcionalidad debe estar protegida por permisos.
 
-## HISTORIA DE USUARIO: HU‑5 – Panel Administrativo
-Como operador interno o administrador,
-quiero monitorear eventos, tickets y estado de servicios,
-para operatividad y seguimiento eficiente.
+Los logs deben registrar la creación/modificación de roles.
 
+## HU4.2 – Auditoría de acciones del sistema
+
+Como auditor,
+quiero ver el historial de acciones del sistema (consultas, pagos, cambios, accesos),
+para detectar anomalías o usos indebidos.
 Criterios de aceptación:
 
-DADO QUE estoy autenticado como administrador
-CUANDO accedo al panel
-ENTONCES veo estadísticas, tickets abiertos y estado del sistema
+Toda acción crítica debe estar auditada.
 
-Estimación: 8 SP
-Prioridad: Alta
-Dependencias: HU‑3, HU‑4, monitoreo de sistemas legados
+<<<<<<< HEAD:docs/07_epicas_e_historias_de_usuario.md
+Los logs deben incluir fecha, usuario, IP y tipo de acción.
+
+Debe existir un buscador para filtrar logs por usuario y fecha.
+
+## HU4.3 – Visualización de reportes gerenciales
+
+Como administrador de alto nivel,
+quiero ver reportes y estadísticas del uso del sistema,
+para tomar decisiones informadas sobre servicios digitales.
+Criterios de aceptación:
+
+El sistema debe mostrar KPIs como pagos realizados, fallas reportadas, consultas activas.
+
+Los datos deben poder exportarse a Excel o PDF.
+
+El sistema debe actualizar datos diariamente.
