@@ -73,8 +73,6 @@ Puede adjuntar ubicación y comentario opcional.
 
 Se genera automáticamente un ticket interno para la unidad correspondiente.
 
-Confirmación inmediata y trazabilidad del reporte.
-
 Prioridad: Alta
 Dependencias: Sistema de enrutamiento de tickets, RF-003
 
@@ -105,8 +103,6 @@ Criterios de validación:
 
 Listado de facturas ordenadas por fecha.
 
-Visualización y descarga en PDF.
-
 Filtrado por servicio o fecha.
 
 Acceso restringido a usuarios autenticados.
@@ -127,8 +123,6 @@ Visualización de reportes por servicio y fecha.
 Gestión de incidentes y fallas reportadas.
 
 Acceso limitado según perfil de usuario.
-
-Permite consulta de trazabilidad de interacciones.
 
 Prioridad: Alta
 Dependencias: RF-004, RF-005, control de accesos
@@ -180,8 +174,6 @@ Criterios de validación:
 Visualización de mensajes amigables durante mantenimientos.
 
 Registro de intentos fallidos para posterior reintento.
-
-Servicios críticos se mantienen funcionales aunque otros estén caídos.
 
 Prioridad: Alta
 Dependencias: RF-001, RF-002, sistemas legados
