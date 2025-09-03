@@ -19,4 +19,4 @@
 - **Agilidad obligatoria:**  
   Proyectos anteriores como la “factura unificada” fracasaron tras 18 meses de implementación. El tiempo disponible exige una arquitectura flexible, desacoplada y que permita entregas incrementales.
 
-  Estas restricciones definiran las decisiones de arquitectura para el desarrollo del proyecto ServiCiudad Conectada, asegurando una alineacion a los estandares y necesidades de la empresa.
+Estas restricciones definiran las decisiones de arquitectura para el desarrollo del proyecto ServiCiudad Conectada, asegurando una alineacion a los estandares y necesidades de la empresa.
