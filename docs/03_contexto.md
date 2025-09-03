@@ -76,39 +76,45 @@ flowchart TB
 
 
 ```
+### Estructura del Organigrama
 
-  ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  Sistema / Activo           P-CLI       P-BIZ   P-SOP1         P-SOP2          P-DEV         P-PLAT        P-DBA   P-LEG         P-SEC          P-AUD         P-DPO
-  ----------------------- -------- ----------- -------- -------------- -------------- -------------- ------------ ------- ------------- -------------- -------------
-  **App Móvil / Portal**     R/C/U       R/C/U        R              R    R (sandbox)    A (SSO/WAF)           --      --    R (pruebas              R       R (solo
-                            propio     dominio                                                                                    seg.)                  privacidad)
+- **Junta Directiva**
+  - **Gerente General (CEO)**: Laura Restrepo
+  - **Dirección Jurídica & Cumplimiento**: Ricardo Abril (Oficial de Cumplimiento)
+  - **Dirección de Transformación Digital (OTD)**: Mateo Pardo
+    - **Oficina de PMO / Programa ServiCiudad Conectada**: Valentina Quintero (PMO Lead)
+  - **Dirección de Operaciones (COO)**: María Fernanda Ospina
+    - **Atención al Cliente & Facturación**: Jorge Castellanos
+    - **Gestión de Campo (red eléctrica/agua)**: Luis Miguel Correa
+  - **Dirección de Tecnología (CIO)**: Andrés Gil
+    - **Arquitectura & Desarrollo (CTO)**: Santiago Vélez
+      - **Arquitecto de Solución**: Eliana Duarte
+      - **Líder Microservicios (Facturación)**: Héctor Riaño
+      - **Líder Microservicios (Clientes/Notificaciones)**: Ana María Páez
+      - **QA/Testing Lead**: Carlos Medina
+  - **Infraestructura & Plataformas**: Camila Rojas
+    - **DevOps/SRE Lead**: Julián Torres
+    - **DBA Lead**: Paula Castaño
+    - **Administrador Mainframe/Legados**: Óscar Barreto
+  - **Seguridad de la Información (CISO)**: Diana Pineda
+    - **Oficial de Privacidad (DPO)**: Natalia Ibargüen
+    - **Analista de Seguridad**: Kevin Montoya
+    - **Auditor Interno de TI**: Silvia Calderón
+  - **Mesa de Servicios (N1/N2)**: Miguel Ángel Rueda
 
-  **API Gateway**               --           R        R              R   R (DEV/TEST)          **A**           --      --     R/Auditar              R            --
+**Comité de Seguridad (SGSI)**: CEO, CIO, CISO (preside), DPO, Jurídica, PMO, Arquitecto de Solución, COO.
 
-  **Microservicios              -- C/U dominio        R   X (runbooks)   X (DEV/TEST)            X/A           --      --             R              R R (PII seudo)
-  (Clientes, Facturación,                                                               (plataforma)                                                   
-  Pagos, Notif.)**                                                                                                                                     
+### Roles SGSI y perfiles de acceso
+- L0 Público/Clientes 
 
-  **Broker de Mensajes          --           R        R X (reintentos)   X (DEV/TEST)          **A**           --      --             R              R            --
-  (Pub/Sub)**                                                                                                                                          
+- L1 Interno básico
 
-  **Data Lake/Warehouse**       -- R (reportes       --             --             --      A (infra)     A (motor      --      R (logs)              R         **R a
-                                         de su                                                         analítico)                                           datasets
-                                      dominio)                                                                                                               seudo**
+- L2 Usuario de negocio
 
-  **DB de Producción**          --          --       --             --             --             --        **A**      -- R (auditoría)  R (metadatos)            --
+- L3 Operación/Soporte
 
-  **Mainframe/Legados**         --          --       --             --             --             --           --   **A**   R (monitor) R (evidencias)            --
+- L4 Administración de plataforma
 
-  **Observabilidad              --  R (paneles    **R**          **R**    R (no prod)          **A**            R       R         **A**          **R**        R (con
-  (SIEM/APM/Logs)**                de negocio)                                                                                                              seudon.)
+- L5 Acceso privilegiado/legados
 
-  **Repos/CI-CD (Git,           --          --       --             --          **A/X          **A**            R      --             R              R            --
-  Artefactory,                                                           (DEV/TEST)**                                                                  
-  Pipelines)**                                                                                                                                         
-
-  **Gestión de                  --          --       --             --             --          **A**            R       R         **A**              R             R
-  identidades                                                                                                                                          
-  (IAM/SSO/Vault)**                                                                                                                                    
-  ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+Acciones: R=Leer, C=Crear, U=Actualizar, D=Eliminar, A=Administrar/Configurar, X=Desplegar/Operar.
