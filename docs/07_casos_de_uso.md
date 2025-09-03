@@ -51,6 +51,11 @@ Se debe garantizar la integridad de los datos usando la capa anticorrupción.
 
 El ciudadano obtiene la información actualizada de sus saldos.
 
+### Diagrama
+<div align="center">
+    <img src="../recursos/imagenes/CU-01.jpeg" alt="CU-01" width="700"/>
+</div>
+
 ## Caso de Uso 2
 **CU-002** – Realizar pago en línea
 
@@ -108,6 +113,11 @@ Se deben registrar los pagos en los sistemas legados mediante la capa anticorrup
 
 El pago queda registrado en el sistema y se genera un comprobante único.
 
+### Diagrama
+<div align="center">
+    <img src="../recursos/imagenes/CU-02.jpeg" alt="CU-02" width="700"/>
+</div>
+
 ## Caso de Uso 3
 **CU-003** – Autenticación de usuarios ciudadanos
 
@@ -148,6 +158,11 @@ El acceso debe cumplir con los lineamientos de seguridad nacionales (Ej: MinTIC)
 **Postcondiciones**:
 
 El ciudadano queda autenticado y puede usar la plataforma.
+
+### Diagrama
+<div align="center">
+    <img src="../recursos/imagenes/CU-03.jpeg" alt="CU-03" width="700"/>
+</div>
 
 ## Caso de Uso 4
 **CU-004** – Consulta técnica y monitoreo de disponibilidad
@@ -196,6 +211,11 @@ El tiempo de inactividad debe ser medido por componente.
 
 El técnico puede diagnosticar fallas y generar alertas preventivas.
 
+### Diagrama
+<div align="center">
+    <img src="../recursos/imagenes/CU-04.jpeg" alt="CU-04" width="700"/>
+</div>
+
 ## Caso de Uso 5
 **CU-005** – Validación y registro de pagos en sistemas legados
 
@@ -241,6 +261,11 @@ Solo se realizan hasta 3 reintentos automáticos. Luego se debe revisar manualme
 
 El pago queda registrado correctamente o se gestiona como incidente.
 
+### Diagrama
+<div align="center">
+    <img src="../recursos/imagenes/CU-05.jpeg" alt="CU-05" width="700"/>
+</div>
+
 ## Caso de Uso 6
 **CU-006** – Administración de servicios y componentes
 
@@ -281,3 +306,8 @@ Las operaciones críticas deben requerir autenticación de segundo factor.
 **Postcondiciones**:
 
 El estado del componente queda actualizado en la plataforma.
+
+### Diagrama
+<div align="center">
+    <img src="../recursos/imagenes/CU-06.jpeg" alt="CU-06" width="700"/>
+</div>
