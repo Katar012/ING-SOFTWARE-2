@@ -76,3 +76,39 @@ flowchart TB
 
 
 ```
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  Sistema / Activo           P-CLI       P-BIZ   P-SOP1         P-SOP2          P-DEV         P-PLAT        P-DBA   P-LEG         P-SEC          P-AUD         P-DPO
+  ----------------------- -------- ----------- -------- -------------- -------------- -------------- ------------ ------- ------------- -------------- -------------
+  **App Móvil / Portal**     R/C/U       R/C/U        R              R    R (sandbox)    A (SSO/WAF)           --      --    R (pruebas              R       R (solo
+                            propio     dominio                                                                                    seg.)                  privacidad)
+
+  **API Gateway**               --           R        R              R   R (DEV/TEST)          **A**           --      --     R/Auditar              R            --
+
+  **Microservicios              -- C/U dominio        R   X (runbooks)   X (DEV/TEST)            X/A           --      --             R              R R (PII seudo)
+  (Clientes, Facturación,                                                               (plataforma)                                                   
+  Pagos, Notif.)**                                                                                                                                     
+
+  **Broker de Mensajes          --           R        R X (reintentos)   X (DEV/TEST)          **A**           --      --             R              R            --
+  (Pub/Sub)**                                                                                                                                          
+
+  **Data Lake/Warehouse**       -- R (reportes       --             --             --      A (infra)     A (motor      --      R (logs)              R         **R a
+                                         de su                                                         analítico)                                           datasets
+                                      dominio)                                                                                                               seudo**
+
+  **DB de Producción**          --          --       --             --             --             --        **A**      -- R (auditoría)  R (metadatos)            --
+
+  **Mainframe/Legados**         --          --       --             --             --             --           --   **A**   R (monitor) R (evidencias)            --
+
+  **Observabilidad              --  R (paneles    **R**          **R**    R (no prod)          **A**            R       R         **A**          **R**        R (con
+  (SIEM/APM/Logs)**                de negocio)                                                                                                              seudon.)
+
+  **Repos/CI-CD (Git,           --          --       --             --          **A/X          **A**            R      --             R              R            --
+  Artefactory,                                                           (DEV/TEST)**                                                                  
+  Pipelines)**                                                                                                                                         
+
+  **Gestión de                  --          --       --             --             --          **A**            R       R         **A**              R             R
+  identidades                                                                                                                                          
+  (IAM/SSO/Vault)**                                                                                                                                    
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
