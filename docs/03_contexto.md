@@ -16,7 +16,7 @@
 
 ## Organigrama del Proyecto
 
-El proyecto contará con la participación de las siguientes áreas:  
+La empresa cuenta con las siguientes areas dentro de si misma:  
 
 ```mermaid
 flowchart TB
