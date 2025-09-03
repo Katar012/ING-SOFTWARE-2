@@ -15,7 +15,7 @@ La propuesta sigue el modelo **arc42**, el cual estructura la documentación arq
 6. [**Requerimientos del Sistema**](06_requerimientos_del_sistema.md) - Requerimientos funcionales del sistema.
 7. [**Casos de Uso**](07_casos_de_uso.md) - Escenarios funcionales clave.
 8. [**Epicas e Historias de Usuario**](08_epicas_e_historias_de_usuario.md) - Epicas desglosadas en historias de usuario.
-9. [**Politicas**](08_politicas.md) - Politicas y normatividad del proyecto.
+9. [**Politicas**](09_politicas.md) - Politicas y normatividad del proyecto.
 10. [**Decisiones de Arquitectura**](07_decisiones_de_arquitectura.md) - Patrones aplicados y justificación.  
 8. [**Riesgos y Deuda Técnica**](08_riesgos_y_deuda_tecnica.md) - Riesgos conocidos y mitigaciones.  
 
