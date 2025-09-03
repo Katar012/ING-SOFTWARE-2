@@ -5,17 +5,17 @@
 Esta sección detalla los escenarios de calidad definidos para cada atributo seleccionado.
 
 ## Atributos escogidos
-Primarios: 
+### Primarios: 
   - Seguridad 
   - Disponilidad
   - Interoperabilidad
 
-Secundarios:
+### Secundarios:
   - Escalabilidad
   - Performance/Rendimiento
 
 ## Seguridad
-Escenario 1
+### Escenario 1
 
 - Código del Escenario: SEG_BD01
 - Descripción: Prevención de accesos no autorizados a la base de datos
@@ -28,7 +28,7 @@ Escenario 1
 - Respuesta: La conexión es rechazada y el intento registrado en logs de auditoría
 - Medida de respuesta: 100% de intentos no autorizados bloqueados; registro de logs ≤ 1 segundo después del intento
 
-Escenario 2
+### Escenario 2
 
 - Código del Escenario: SEG_SRV01
 - Descripción: Protección contra inyección de SQL en microservicios
@@ -41,7 +41,7 @@ Escenario 2
 - Respuesta: Solicitud rechazada y notificación de alerta generada
 - Medida de respuesta: 100% de inyecciones bloqueadas; tiempo de respuesta ≤ 500 ms
 
-Escenario 3
+### Escenario 3
 
 - Código del Escenario: SEG_INT01
 - Descripción: Protección de la interfaz web frente a ataques de fuerza bruta
@@ -54,7 +54,7 @@ Escenario 3
 - Respuesta: Bloqueo temporal de la cuenta y notificación al usuario legítimo
 - Medida de respuesta: Bloqueo automático ≤ 2 segundos después del 10º intento fallido
 
-Escenario 4
+### Escenario 4
 
 - Código del Escenario: SEG_COD01
 - Descripción: Cifrado de datos sensibles en código fuente y transporte
@@ -68,7 +68,7 @@ Escenario 4
 - Medida de respuesta: 100% de datos cifrados; tiempo de cifrado ≤ 5 ms por registro
 
 ## Disponibilidad
-Escenario 1
+### Escenario 1
 
 - Código del Escenario: DISP_BD01
 - Descripción: Alta disponibilidad de la base de datos principal durante horas pico
@@ -81,7 +81,7 @@ Escenario 1
 - Respuesta: Todas las transacciones son aceptadas y procesadas sin fallos de conexión
 - Medida de respuesta: ≥ 99.95% de transacciones exitosas durante el periodo de 1 hora
 
-Escenario 2
+### Escenario 2
 
 - Código del Escenario: DISP_SRV01
 - Descripción: Disponibilidad de servicio de facturación unificada ante caída de un nodo
@@ -94,7 +94,7 @@ Escenario 2
 - Respuesta: El sistema redirige automáticamente las solicitudes a nodos activos y mantiene el servicio disponible
 - Medida de respuesta: 100% de disponibilidad para usuarios finales, con tiempo de failover ≤ 2 segundos
 
-Escenario 3
+### Escenario 3
 
 - Código del Escenario: DISP_INS01
 - Descripción: Disponibilidad de instancias de servidor ante mantenimiento programado
@@ -107,7 +107,7 @@ Escenario 3
 - Respuesta: Los usuarios continúan accediendo al sistema sin interrupción
 - Medida de respuesta: ≤ 0.1% de solicitudes fallidas durante el periodo de mantenimiento
 
-Escenario 4
+### Escenario 4
 
 - Código del Escenario: DISP_RED01
 - Descripción: Disponibilidad de la red interna durante picos de tráfico
@@ -121,7 +121,7 @@ Escenario 4
 - Medida de respuesta: Pérdida de paquetes ≤ 0.5% y latencia promedio ≤ 50 ms durante el pico
 
 ## Interoperabilidad
-Escenario 1
+### Escenario 1
 
 - Código del Escenario: INT_SRV01
 - Descripción: Integración del servicio de facturación unificada con sistemas legados
@@ -134,7 +134,7 @@ Escenario 1
 - Respuesta: Datos del mainframe se entregan en formato JSON estandarizado
 - Medida de respuesta: 100% de respuestas conformes al estándar; tiempo ≤ 2 segundos
 
-Escenario 2
+### Escenario 2
 
 - Código del Escenario: INT_BD01
 - Descripción: Consulta de datos entre microservicios heterogéneos
@@ -147,7 +147,7 @@ Escenario 2
 - Respuesta: Datos transformados a formato unificado y entregados al microservicio
 - Medida de respuesta: ≥ 99% de datos correctamente transformados; tiempo de integración ≤ 3 segundos
 
-Escenario 3
+### Escenario 3
 
 - Código del Escenario: INT_RED01
 - Descripción: Interoperabilidad con redes externas de pagos
@@ -160,7 +160,7 @@ Escenario 3
 - Respuesta: Pago procesado y confirmado correctamente
 - Medida de respuesta: 100% de pagos reconocidos; tiempo de confirmación ≤ 5 segundos
 
-Escenario 4
+### Escenario 4
 
 - Código del Escenario: INT_INS01
 - Descripción: Orquestación de microservicios heterogéneos
@@ -174,8 +174,7 @@ Escenario 4
 - Medida de respuesta: ≥ 99.9% de eventos entregados sin pérdida; latencia ≤ 1 segundo
 
 ## Escalabilidad
-Atributo: Escalabilidad
-Escenario 1
+### Escenario 1
 
 - Código del Escenario: ESC_SRV01
 - Descripción: Escalabilidad horizontal del servicio de facturación
@@ -188,7 +187,7 @@ Escenario 1
 - Respuesta: Nuevas instancias se despliegan automáticamente para absorber la carga
 - Medida de respuesta: ≥ 99.9% de solicitudes procesadas; tiempo de provisioning ≤ 30 segundos por instancia
 
-Escenario 2
+### Escenario 2
 
 - Código del Escenario: ESC_BD01
 - Descripción: Escalabilidad de la base de datos ante aumento de transacciones
@@ -201,7 +200,7 @@ Escenario 2
 - Respuesta: La base de datos escala mediante shards o réplicas sin degradar rendimiento
 - Medida de respuesta: Tiempo de transacción ≤ 3 segundos; disponibilidad ≥ 99.95%
   
-Escenario 3
+### Escenario 3
 
 - Código del Escenario: ESC_INS02
 - Descripción: Escalabilidad de instancias de servidor bajo alta carga
@@ -214,7 +213,7 @@ Escenario 3
 - Respuesta: Se agregan automáticamente instancias adicionales para soportar la carga
 - Medida de respuesta: ≤ 1% de solicitudes rechazadas; tiempo de escalado ≤ 60 segundos
 
-Escenario 4
+### Escenario 4
 
 - Código del Escenario: ESC_BAL01
 - Descripción: Escalabilidad del balanceador de carga ante picos de tráfico
@@ -228,7 +227,7 @@ Escenario 4
 - Medida de respuesta: ≤ 0.5% de solicitudes fallidas; latencia de enrutamiento ≤ 50 ms
 
 ## Performance/Rendimiento
-Escenario 1
+### Escenario 1
 
 - Código del Escenario: PER_BD01
 - Descripción: Tiempo de respuesta de consultas complejas en base de datos
@@ -241,7 +240,7 @@ Escenario 1
 - Respuesta: La consulta se ejecuta y retorna resultados
 - Medida de respuesta: Tiempo de respuesta ≤ 3 segundos en el 95% de los casos
 
-Escenario 2
+### Escenario 2
 
 - Código del Escenario: PER_SRV01
 - Descripción: Rendimiento de microservicio de facturación unificada
@@ -254,7 +253,7 @@ Escenario 2
 - Respuesta: Todas las solicitudes procesadas correctamente
 - Medida de respuesta: Tiempo promedio ≤ 2 segundos por transacción; ≥ 99.5% de solicitudes exitosas
 
-Escenario 3
+### Escenario 3
 
 - Código del Escenario: PER_INT01
 - Descripción: Tiempo de respuesta de la interfaz web
@@ -267,7 +266,7 @@ Escenario 3
 - Respuesta: Dashboard cargado completamente
 - Medida de respuesta: Tiempo de carga ≤ 3 segundos en 95% de los casos
 
-Escenario 4
+### Escenario 4
 
 - Código del Escenario: PER_RED01
 - Descripción: Latencia en la red durante picos de tráfico
