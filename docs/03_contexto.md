@@ -104,17 +104,3 @@ flowchart TB
 
 **Comité de Seguridad (SGSI)**: CEO, CIO, CISO (preside), DPO, Jurídica, PMO, Arquitecto de Solución, COO.
 
-### Roles SGSI y perfiles de acceso
-- L0 Público/Clientes 
-
-- L1 Interno básico
-
-- L2 Usuario de negocio
-
-- L3 Operación/Soporte
-
-- L4 Administración de plataforma
-
-- L5 Acceso privilegiado/legados
-
-Acciones: R=Leer, C=Crear, U=Actualizar, D=Eliminar, A=Administrar/Configurar, X=Desplegar/Operar.
