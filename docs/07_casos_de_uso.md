@@ -219,7 +219,7 @@ Automatiza la validación de los pagos recibidos por el portal y su posterior in
 
 3. Convierte los datos al formato requerido por el sistema legado.
 
-4.Envía el registro de pago al sistema.
+4. Envía el registro de pago al sistema.
 
 5. El sistema legado responde con estado OK.
 
