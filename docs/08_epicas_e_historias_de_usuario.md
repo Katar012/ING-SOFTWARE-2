@@ -1,8 +1,8 @@
 ## 7. Tácticas para Garantizar Atributos de Calidad
 
-### ÉPICA 1: Consulta de Saldos y Pagos en Línea
+## ÉPICA 1: Consulta de Saldos y Pagos en Línea
 
-## HU1.1 – Consulta de saldos como ciudadano
+### HU1.1 – Consulta de saldos como ciudadano
 
 Como ciudadano registrado,
 quiero consultar mi saldo pendiente en servicios municipales (ej: agua, predial, etc.),
@@ -15,7 +15,7 @@ El sistema debe permitir consultar el historial de pagos.
 
 El sistema debe validar la identidad del usuario.
 
-## HU1.2 – Realización de pagos como ciudadano
+### HU1.2 – Realización de pagos como ciudadano
 
 Como ciudadano registrado,
 quiero poder pagar mis servicios municipales en línea,
@@ -28,7 +28,7 @@ Debe generarse confirmación del pago vía correo o notificación.
 
 El pago debe reflejarse en tiempo real en el mainframe.
 
-## HU1.3 – Consulta de pagos como operador interno
+### HU1.3 – Consulta de pagos como operador interno
 
 Como operador interno,
 quiero ver los pagos realizados por los ciudadanos,
@@ -41,9 +41,9 @@ Los datos deben obtenerse en tiempo real del mainframe.
 
 Solo usuarios autorizados pueden acceder a esta información.
 
-### ÉPICA 2: Integridad de Datos y Acceso Seguro
+## ÉPICA 2: Integridad de Datos y Acceso Seguro
 
-## HU2.1 – Validación de autenticidad de datos
+### HU2.1 – Validación de autenticidad de datos
 
 Como administrador del sistema,
 quiero asegurarme de que los datos que consultan los usuarios provienen del sistema oficial,
@@ -56,7 +56,7 @@ Todos los datos deben ser obtenidos a través de una capa anticorrupción valida
 
 Deben registrarse logs de acceso a datos.
 
-## HU2.2 – Acceso seguro a través de autenticación multifactor (MFA)
+### HU2.2 – Acceso seguro a través de autenticación multifactor (MFA)
 
 Como ciudadano,
 quiero acceder al sistema con doble verificación,
@@ -69,9 +69,9 @@ El sistema debe revocar accesos después de múltiples intentos fallidos.
 
 El MFA debe estar disponible en web y app móvil.
 
-### ÉPICA 3: Soporte Técnico y Gestión de Fallas
+## ÉPICA 3: Soporte Técnico y Gestión de Fallas
 
-## HU3.1 – Reporte de fallas como técnico de campo
+### HU3.1 – Reporte de fallas como técnico de campo
 
 Como técnico de campo,
 quiero reportar una falla directamente desde la app móvil,
@@ -97,9 +97,9 @@ El sistema debe mostrar un dashboard con métricas por zona y tipo.
 
 Solo operadores autorizados pueden modificar tickets.
 
-### ÉPICA 4: Administración del Sistema
+## ÉPICA 4: Administración del Sistema
 
-## HU4.1 – Creación y gestión de roles de usuarios
+### HU4.1 – Creación y gestión de roles de usuarios
 
 Como administrador,
 quiero crear y asignar roles con permisos específicos,
@@ -112,7 +112,7 @@ Cada funcionalidad debe estar protegida por permisos.
 
 Los logs deben registrar la creación/modificación de roles.
 
-## HU4.2 – Auditoría de acciones del sistema
+### HU4.2 – Auditoría de acciones del sistema
 
 Como auditor,
 quiero ver el historial de acciones del sistema (consultas, pagos, cambios, accesos),
@@ -126,7 +126,7 @@ Los logs deben incluir fecha, usuario, IP y tipo de acción.
 
 Debe existir un buscador para filtrar logs por usuario y fecha.
 
-## HU4.3 – Visualización de reportes gerenciales
+### HU4.3 – Visualización de reportes gerenciales
 
 Como administrador de alto nivel,
 quiero ver reportes y estadísticas del uso del sistema,
@@ -139,10 +139,9 @@ Los datos deben poder exportarse a Excel o PDF.
 
 El sistema debe actualizar datos diariamente.
 
+## ÉPICA 5: Monitoreo y Resiliencia de Sistemas
 
-### ÉPICA 5: Monitoreo y Resiliencia de Sistemas
-
-## HU5.1 – Monitoreo de disponibilidad de sistemas
+### HU5.1 – Monitoreo de disponibilidad de sistemas
 
 Como administrador de TI,
 quiero visualizar en tiempo real el estado de todos los sistemas legados y microservicios,
@@ -168,9 +167,9 @@ Fallos detectados disparan notificaciones y fallback automáticos.
 
 Historial de eventos críticos registrado para auditoría.
 
-### ÉPICA 6: Orquestación y Comunicación Eficiente
+## ÉPICA 6: Orquestación y Comunicación Eficiente
 
-## HU6.1 – Notificaciones y difusión de eventos
+### HU6.1 – Notificaciones y difusión de eventos
 
 Como sistema de notificaciones,
 quiero difundir información crítica (apagones, cortes de agua, incidentes de telecom) a todos los usuarios afectados,
@@ -183,7 +182,7 @@ Actualización de mapa de incidencias en tiempo real.
 
 Sistema desacoplado mediante patrón Publish-Subscribe.
 
-## HU6.2 – Construcción de Dashboards unificados
+### HU6.2 – Construcción de Dashboards unificados
 
 Como ciudadano,
 quiero ver en un solo panel mi saldo de energía, consumo de agua y datos de telecom,
@@ -196,9 +195,9 @@ Datos obtenidos de forma consistente y con formato estandarizado (JSON).
 
 Dashboard actualizado cada vez que hay cambios de saldo o consumo.
 
-### ÉPICA 7: Gestión y Auditoría de Seguridad
+## ÉPICA 7: Gestión y Auditoría de Seguridad
 
-## HU7.1 – Registro y auditoría de acciones del usuario
+### HU7.1 – Registro y auditoría de acciones del usuario
 
 Como auditor,
 quiero tener un registro completo de todas las acciones de usuarios y operadores,
@@ -211,7 +210,7 @@ Accesibles solo a personal autorizado.
 
 Exportación a formatos de análisis (CSV/PDF).
 
-## HU7.2 – Control de roles y permisos
+### HU7.2 – Control de roles y permisos
 
 Como administrador,
 quiero definir roles y permisos específicos para cada tipo de usuario,
@@ -234,9 +233,9 @@ Administradores → Seguridad, roles, auditoría, resiliencia
 
 Sistema → Integración con legados, microservicios, orquestación
 
-### ÉPICA 8: Integración con Sistemas Legados
+## ÉPICA 8: Integración con Sistemas Legados
 
-## HU8.1 – Adaptador para sistema de energía (Mainframe)
+### HU8.1 – Adaptador para sistema de energía (Mainframe)
 
 Como microservicio de facturación,
 quiero consultar el consumo de energía usando un adaptador que simule terminal 3270,
@@ -249,7 +248,7 @@ Respuestas estandarizadas en JSON.
 
 Errores o tiempos de espera son manejados sin afectar al usuario.
 
-## HU8.2 – Transformación de datos del sistema de acueducto
+### HU8.2 – Transformación de datos del sistema de acueducto
 
 Como microservicio de facturación unificada,
 quiero convertir reportes de texto de ancho fijo a JSON,
@@ -262,9 +261,9 @@ Validación de consistencia de datos.
 
 Logs de errores y excepciones disponibles para auditoría.
 
-### ÉPICA 9: Enrutamiento y Coordinación de Servicios
+## ÉPICA 9: Enrutamiento y Coordinación de Servicios
 
-## HU9.1 – Enrutamiento de solicitudes de soporte
+### HU9.1 – Enrutamiento de solicitudes de soporte
 
 Como portal/app,
 quiero dirigir automáticamente las solicitudes de soporte al sistema de tickets correspondiente según el servicio,
@@ -277,7 +276,7 @@ Confirmación de recepción del ticket al usuario.
 
 Fallback en caso de error en el sistema de tickets.
 
-## HU9.2 – Publicación de eventos críticos (apagones, cortes, incidencias)
+### HU9.2 – Publicación de eventos críticos (apagones, cortes, incidencias)
 
 Como microservicio de eventos,
 quiero notificar a todos los usuarios afectados y actualizar sistemas internos de manera desacoplada,
@@ -290,9 +289,9 @@ Notificaciones vía SMS, push y correo.
 
 Mapas de incidencia actualizados en tiempo real.
 
-### ÉPICA 10: Persistencia y Sincronización de Datos
+## ÉPICA 10: Persistencia y Sincronización de Datos
 
-## HU10.1 – Base de datos por servicio
+### HU10.1 – Base de datos por servicio
 
 Como microservicio de clientes,
 quiero tener mi propia base de datos sincronizada con los sistemas legados,
@@ -305,7 +304,7 @@ Consultas rápidas sin degradar rendimiento del mainframe.
 
 Integridad de datos garantizada mediante validaciones automáticas.
 
-## HU10.2 – Construcción de objetos de respuesta compuestos (DashboardDTO)
+### HU10.2 – Construcción de objetos de respuesta compuestos (DashboardDTO)
 
 Como microservicio de dashboard,
 quiero construir un objeto que combine saldos de energía, agua y telecom,
