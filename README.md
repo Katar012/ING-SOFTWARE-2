@@ -22,3 +22,9 @@ Los siguientes recursos sirven como apoyo en la documentacion:
 - **Diagramas**: Diagramas de arquitectura que ilustran diferentes aspectos de ServiCiudad Conectada.
 - **Imagenes**: Imagenes  relacionados a la institucion educativa de la que provienen los autores del proyecto.
 
+## Desarrolladores
+
+- **Juan David Cuero Reina  - 2226402**
+- **Juan Esteban Vila Marin - 2230351**
+- **Juan Jose Gomez Oviedo  - 2226413**
+- **Santiago Lopez Lopez    - 2225727**
