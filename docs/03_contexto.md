@@ -104,3 +104,19 @@ flowchart TB
 
 **Comité de Seguridad (SGSI)**: CEO, CIO, CISO (preside), DPO, Jurídica, PMO, Arquitecto de Solución, COO.
 
+### Servicio Orquestador
+El servicio que debe orquestar los demás es un Orchestrator/Facade llamado TransaccionesOrchestratorService.
+
+Funciones principales:
+
+- Orquestar casos de uso compuestos:
+
+- Ejemplo: "Realizar pago en línea" → valida usuario (AuthService) → consulta saldo (SaldoService) → registra transacción (PagoService) → audita operación (AuditoriaService).
+
+- Gestionar flujo de negocio de extremo a extremo (E2E).
+
+- Aplicar la capa anticorrupción para comunicarse con el mainframe y exponer solo los datos necesarios de forma limpia.
+
+- Centralizar seguridad y validaciones cross-cutting.
+
+- Coordinar notificaciones al usuario (confirmación de pago, saldo actualizado).
