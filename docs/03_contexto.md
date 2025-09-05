@@ -104,7 +104,7 @@ flowchart TB
 
 **Comité de Seguridad (SGSI)**: CEO, CIO, CISO (preside), DPO, Jurídica, PMO, Arquitecto de Solución, COO.
 
-### Servicio Orquestador
+## Servicio Orquestador
 El servicio que debe orquestar los demás es un Orchestrator/Facade llamado TransaccionesOrchestratorService.
 
 Funciones principales:
