@@ -1,4 +1,4 @@
-package com.example.ServiCiudadCali.applicative;
+package com.example.ServiCiudadCali.application;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
