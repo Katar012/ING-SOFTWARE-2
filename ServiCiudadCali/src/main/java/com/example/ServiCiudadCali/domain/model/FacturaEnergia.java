@@ -18,7 +18,7 @@ public class FacturaEnergia {
         return idCliente;
     }
 
-    public void setId_cliente(String idCliente) {
+    public void setIdCliente(String idCliente) {
         this.idCliente = idCliente;
     }
 
@@ -42,7 +42,7 @@ public class FacturaEnergia {
         return valorPagar;
     }
 
-    public void setValor_pagar(double valorPagar) {
+    public void setValorPagar(double valorPagar) {
         this.valorPagar = valorPagar;
     }
 

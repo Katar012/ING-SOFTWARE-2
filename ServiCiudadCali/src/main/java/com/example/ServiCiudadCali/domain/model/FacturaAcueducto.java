@@ -47,7 +47,7 @@ public class FacturaAcueducto {
         this.consumoM3 = consumoM3;
     }
 
-    public double getValor_pagar() {
+    public double getValorPagar() {
         return valorPagar;
     }
 
