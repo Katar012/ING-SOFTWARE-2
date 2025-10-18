@@ -1,7 +1,12 @@
-package com.example.ServiCiudadCali.domain.dto;
+package com.example.ServiCiudadCali.application.dto;
+
+import lombok.Builder;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
+@Builder
+@Getter
 public class DeudaConsolidadaDTO {
     private final String clienteId;
     private final String nombreCliente;
@@ -17,26 +22,7 @@ public class DeudaConsolidadaDTO {
         this.totalAPagar = totalAPagar;
     }
 
-    public String getClienteId() {
-        return clienteId;
-    }
-
-    public String getNombreCliente() {
-        return nombreCliente;
-    }
-
-    public LocalDateTime getFechaConsulta() {
-        return fechaConsulta;
-    }
-
-    public ResumenDeudaDTO getResumenDeuda() {
-        return resumenDeuda;
-    }
-
-    public double getTotalAPagar() {
-        return totalAPagar;
-    }
-
+    @Getter
     public static class ResumenDeudaDTO {
         private final FacturaEnergiaDTO facturaEnergia;
         private final FacturaAcueductoDTO facturaAcueducto;
@@ -46,15 +32,9 @@ public class DeudaConsolidadaDTO {
             this.facturaAcueducto = facturaAcueducto;
         }
 
-        public FacturaEnergiaDTO getFacturaEnergia() {
-            return facturaEnergia;
-        }
-
-        public FacturaAcueductoDTO getFacturaAcueducto() {
-            return facturaAcueducto;
-        }
     }
 
+    @Getter
     public static class FacturaEnergiaDTO {
         private final String periodo;
         private final String consumo;
@@ -66,20 +46,9 @@ public class DeudaConsolidadaDTO {
             this.valorPagar = valorPagar;
         }
 
-        public String getPeriodo() {
-            return periodo;
-        }
-
-        public String getConsumo() {
-            return consumo;
-        }
-
-        public String getValorPagar() {
-            return valorPagar;
-        }
-
 
     }
+    @Getter
     public static class FacturaAcueductoDTO {
         private final String periodo;
         private final String consumo;
@@ -91,17 +60,6 @@ public class DeudaConsolidadaDTO {
             this.valorPagar = valorPagar;
         }
 
-        public String getPeriodo() {
-            return periodo;
-        }
-
-        public String getConsumo() {
-            return consumo;
-        }
-
-        public double getValorPagar() {
-            return valorPagar;
-        }
     }
 
 

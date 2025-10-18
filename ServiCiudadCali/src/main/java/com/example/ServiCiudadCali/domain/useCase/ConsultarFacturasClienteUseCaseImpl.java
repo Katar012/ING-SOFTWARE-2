@@ -1,4 +1,4 @@
-package com.example.ServiCiudadCali.application.useCase;
+package com.example.ServiCiudadCali.domain.useCase;
 
 import com.example.ServiCiudadCali.domain.ports.out.AcueductoPort;
 import com.example.ServiCiudadCali.domain.ports.out.EnergiaPort;
