@@ -1,3 +1,6 @@
+# ==========================================
+# Maven
+# ==========================================
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -7,11 +10,60 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-# https://maven.apache.org/wrapper/#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
 
-# Eclipse m2e generated files
-# Eclipse Core
+# ==========================================
+# IntelliJ IDEA
+# (configuración local que no debe subirse)
+# ==========================================
+.idea/
+*.iml
+out/
+
+# ==========================================
+# VS Code
+# ==========================================
+.vscode/
+.history/
+*.code-workspace
+
+# ==========================================
+# Logs
+# ==========================================
+*.log
+logs/
+spring.log
+
+# ==========================================
+# Archivos temporales o de compilación
+# ==========================================
+*.class
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# ==========================================
+# Configuración sensible o de entorno
+# ==========================================
+.env
+*.env
+application-*.yml
+application-*.yaml
+application-*.properties
+
+# ==========================================
+# Archivos del sistema operativo
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Eclipse / NetBeans (por si alguien usa otro IDE)
+# ==========================================
 .project
-# JDT-specific (Eclipse Java Development Tools)
 .classpath
+.settings/
+bin/
+.nb-gradle/
+.nbproject/private/
