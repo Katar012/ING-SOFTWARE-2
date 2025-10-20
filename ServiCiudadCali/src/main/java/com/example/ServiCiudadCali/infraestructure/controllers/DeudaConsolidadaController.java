@@ -1,4 +1,4 @@
-package com.example.ServiCiudadCali.infraestructure.controllers;
+/*package com.example.ServiCiudadCali.infraestructure.controllers;
 
 import com.example.ServiCiudadCali.application.dto.DeudaConsolidadaDTO;
 import com.example.ServiCiudadCali.domain.useCase.ConsultarFacturasClienteUseCaseImpl;
@@ -32,4 +32,4 @@ public class DeudaConsolidadaController {
 
         return ResponseEntity.ok(deudaConsolidada);
     }*/
-}
+//} 
