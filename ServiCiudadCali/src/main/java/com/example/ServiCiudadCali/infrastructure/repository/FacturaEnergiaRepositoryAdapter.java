@@ -16,34 +16,31 @@ public class FacturaEnergiaRepositoryAdapter implements EnergiaPort {
 
     @Override
     public Optional<FacturaEnergia> obtenerPorCliente(String clienteId) {
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(
-                        getClass().getClassLoader().getResourceAsStream(ARCHIVO_ENERGIA)
-                ))) {
+        var inputStream = getClass().getClassLoader().getResourceAsStream(ARCHIVO_ENERGIA);
+        if (inputStream == null) {
+            return Optional.empty();
+        }
 
-            if (reader == null) {
-                throw new RuntimeException("No se encontró el archivo " + ARCHIVO_ENERGIA);
-            }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        String linea;
+        FacturaEnergia ultimaFactura = null;
 
-            String linea;
-            FacturaEnergia ultimaFactura = null;
-
+        try {
             while ((linea = reader.readLine()) != null) {
                 // Formato: id_cliente(10), periodo(6), consumo_kwh(8), valor_pagar(12)
                 String id = linea.substring(0, 10);
                 String periodo = linea.substring(10, 16);
-                int consumoKwh = Integer.parseInt(linea.substring(16, 24));
+                int consumoKwh = Integer.parseInt(linea.substring(16, 24).trim());
                 BigDecimal valorPagar = new BigDecimal(linea.substring(24).trim());
 
                 if (id.equals(clienteId)) {
                     ultimaFactura = new FacturaEnergia(id, periodo, consumoKwh, valorPagar);
                 }
             }
-
-            return Optional.ofNullable(ultimaFactura);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error al leer el archivo de energía: " + e.getMessage(), e);
+        } catch (Exception ignored) {
+            // no lanzamos excepcion
         }
+
+        return Optional.ofNullable(ultimaFactura);
     }
 }
