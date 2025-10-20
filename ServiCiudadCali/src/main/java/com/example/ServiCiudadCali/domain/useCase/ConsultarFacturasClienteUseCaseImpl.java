@@ -5,8 +5,8 @@ import com.example.ServiCiudadCali.domain.exception.ResourceNotFoundException;
 import com.example.ServiCiudadCali.domain.model.FacturaAcueducto;
 import com.example.ServiCiudadCali.domain.model.FacturaEnergia;
 import com.example.ServiCiudadCali.domain.ports.in.ConsultarFacturasClienteUseCase;
-import com.example.ServiCiudadCali.domain.ports.out.AcueductoPort;
-import com.example.ServiCiudadCali.domain.ports.out.EnergiaPort;
+import com.example.ServiCiudadCali.domain.ports.outs.AcueductoPort;
+import com.example.ServiCiudadCali.domain.ports.outs.EnergiaPort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
