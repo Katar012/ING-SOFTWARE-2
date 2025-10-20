@@ -1,35 +1,24 @@
-/*package com.example.ServiCiudadCali.infraestructure.controllers;
+package com.example.ServiCiudadCali.infrastructure.controllers;
 
 import com.example.ServiCiudadCali.application.dto.DeudaConsolidadaDTO;
-import com.example.ServiCiudadCali.domain.useCase.ConsultarFacturasClienteUseCaseImpl;
+import com.example.ServiCiudadCali.domain.ports.in.ConsultarFacturasClienteUseCase;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/clientes")
+@RequestMapping("/api/acuerdos")
 public class DeudaConsolidadaController {
+    @Autowired
+    ConsultarFacturasClienteUseCase consultarFacturasClienteUseCase;
 
-    private final ConsultarFacturasClienteUseCaseImpl consultarFacturasClienteUseCase;
-
-    // Inyección por constructor
-    public DeudaConsolidadaController(ConsultarFacturasClienteUseCaseImpl consultarFacturasClienteUseCase) {
-        this.consultarFacturasClienteUseCase = consultarFacturasClienteUseCase;
+    @GetMapping("/ObtenerDeudaConsolidadaPorClienteId/{clienteId}")
+    public ResponseEntity<DeudaConsolidadaDTO> consultarPorCliente(@PathVariable("clienteId") String clienteId){
+        return new ResponseEntity<DeudaConsolidadaDTO>(consultarFacturasClienteUseCase.consultarPorCliente(clienteId),HttpStatus.OK);
     }
+}
 
-    /**
-     * Endpoint para obtener la deuda consolidada de un cliente
-     * @param clienteId ID del cliente
-     * @return DeudaConsolidadaDTO con los datos del cliente
-     */
-    
-    /*@GetMapping("/{clienteId}/deuda-consolidada")
-    public ResponseEntity<DeudaConsolidadaDTO> obtenerDeudaConsolidada(@PathVariable String clienteId) {
-        DeudaConsolidadaDTO deudaConsolidada = consultarFacturasClienteUseCase.obtenerDeudaConsolidada(clienteId);
-
-        if (deudaConsolidada == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(deudaConsolidada);
-    }*/
-//} 
