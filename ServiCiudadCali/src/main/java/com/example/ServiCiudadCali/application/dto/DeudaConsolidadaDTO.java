@@ -28,7 +28,7 @@ public class DeudaConsolidadaDTO {
     @Builder
     public static class FacturaEnergiaDTO {
         private final String periodo;
-        private final String consumo;
+        private final int consumo;
         private final BigDecimal valorPagar;
 
     }
@@ -36,7 +36,7 @@ public class DeudaConsolidadaDTO {
     @Builder
     public static class FacturaAcueductoDTO {
         private final String periodo;
-        private final String consumo;
+        private final int consumo;
         private final BigDecimal valorPagar;
 
     }
