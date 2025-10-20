@@ -1,4 +1,4 @@
-package com.example.ServiCiudadCali.infraestructure.repository;
+package com.example.ServiCiudadCali.infrastructure.repository;
 
 import com.example.ServiCiudadCali.domain.model.FacturaAcueducto;
 import org.springframework.data.jpa.repository.JpaRepository;

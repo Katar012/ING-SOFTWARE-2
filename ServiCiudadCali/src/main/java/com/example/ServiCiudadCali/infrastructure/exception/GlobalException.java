@@ -1,4 +1,4 @@
-package com.example.ServiCiudadCali.infraestructure.exception;
+package com.example.ServiCiudadCali.infrastructure.exception;
 
 import com.example.ServiCiudadCali.domain.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;

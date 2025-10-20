@@ -1,7 +1,7 @@
-package com.example.ServiCiudadCali.infraestructure.adapters;
+package com.example.ServiCiudadCali.infrastructure.adapters;
 
 import com.example.ServiCiudadCali.domain.model.FacturaEnergia;
-import com.example.ServiCiudadCali.infraestructure.repository.FacturaEnergiaRepository;
+import com.example.ServiCiudadCali.infrastructure.repository.FacturaEnergiaRepository;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
