@@ -1,23 +1,13 @@
 package com.example.ServiCiudadCali.application.dto;
 
 import lombok.Builder;
-<<<<<<< HEAD
-import lombok.Getter;
-import lombok.Setter;
-=======
 import lombok.Data;
->>>>>>> 05b9ba3354cc6985c6d5ecfab98230a3805183e7
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Builder
-<<<<<<< HEAD
-@Getter
-@Setter // No repetible 
-=======
 @Data
->>>>>>> 05b9ba3354cc6985c6d5ecfab98230a3805183e7
 public class DeudaConsolidadaDTO {
     private final String clienteId;
     private final String nombreCliente;
