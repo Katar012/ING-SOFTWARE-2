@@ -2,11 +2,13 @@ package com.example.ServiCiudadCali.application.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Builder
 @Getter
+@Setter // No repetible 
 public class DeudaConsolidadaDTO {
     private final String clienteId;
     private final String nombreCliente;
