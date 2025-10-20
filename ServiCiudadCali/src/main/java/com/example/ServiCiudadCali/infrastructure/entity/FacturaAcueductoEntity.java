@@ -21,7 +21,7 @@ public class FacturaAcueductoEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "id_cliente", length = 10, nullable = false)
-    private String clienteId;
+    private String idCliente;
     @Column(nullable = false, length = 6)
     private String periodo;
     @Column(name = "consumo_m3", nullable = false)
