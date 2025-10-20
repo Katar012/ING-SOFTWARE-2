@@ -1,12 +1,14 @@
 package com.example.ServiCiudadCali.domain.model;
 
+import java.math.BigDecimal;
+
 public class FacturaEnergia {
     private String idCliente;
     private String periodo;
     private int consumoKwh;
-    private double valorPagar;
+    private BigDecimal valorPagar;
 
-    public FacturaEnergia (String idCliente, String periodo, int consumoKwh, double valorPagar) {
+    public FacturaEnergia (String idCliente, String periodo, int consumoKwh, BigDecimal valorPagar) {
         this.idCliente = idCliente;
         this.periodo = periodo;
         this.consumoKwh = consumoKwh;
@@ -38,11 +40,11 @@ public class FacturaEnergia {
         this.consumoKwh = consumoKwh;
     }
 
-    public double getValorPagar() {
+    public BigDecimal getValorPagar() {
         return valorPagar;
     }
 
-    public void setValorPagar(double valorPagar) {
+    public void setValorPagar(BigDecimal valorPagar) {
         this.valorPagar = valorPagar;
     }
 
