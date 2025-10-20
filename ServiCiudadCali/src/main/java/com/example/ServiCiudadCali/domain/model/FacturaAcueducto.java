@@ -1,13 +1,15 @@
 package com.example.ServiCiudadCali.domain.model;
 
+import java.math.BigDecimal;
+
 public class FacturaAcueducto {
     private Long id;
     private String idCliente;
     private String periodo;
     private int consumoM3;
-    private double valorPagar;
+    private BigDecimal valorPagar;
 
-    public FacturaAcueducto(Long id, String idCliente, String periodo, int consumoM3, double valorPagar) {
+    public FacturaAcueducto(Long id, String idCliente, String periodo, int consumoM3, BigDecimal valorPagar) {
         this.id = id;
         this.idCliente = idCliente;
         this.periodo = periodo;
@@ -47,11 +49,11 @@ public class FacturaAcueducto {
         this.consumoM3 = consumoM3;
     }
 
-    public double getValorPagar() {
+    public BigDecimal getValorPagar() {
         return valorPagar;
     }
 
-    public void setValorPagar(double valorPagar) {
+    public void setValorPagar(BigDecimal valorPagar) {
         this.valorPagar = valorPagar;
     }
 
