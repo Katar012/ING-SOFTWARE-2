@@ -25,13 +25,13 @@ cd ServiCiudadCali
 ```
 
 ## Configuración de la base de datos (MySQL 8)
- **Comando para crear la database**
+- **Comando para crear la database**
 CREATE DATABASE acueducto;
 
-**Comando para acceder a la database**
+- **Comando para acceder a la database**
 USE acueducto;
 
-**Comando para crear la tabla cliente**
+- **Comando para crear la tabla cliente**
 
 CREATE TABLE cliente (
   id        VARCHAR(20)  NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE cliente (
   PRIMARY KEY (id)
 );
 
-**Comando para crear la tabla factura acueducto**
+- **Comando para crear la tabla factura acueducto**
 
 CREATE TABLE facturas_acueducto (
   id           BIGINT NOT NULL AUTO_INCREMENT,
@@ -53,7 +53,7 @@ CREATE TABLE facturas_acueducto (
     FOREIGN KEY (id_cliente) REFERENCES cliente(id)
 );
 
-**Comando para insertar los datos en la tabla cliente**
+- **Comando para insertar los datos en la tabla cliente**
 
 INSERT INTO cliente (id, nombre) VALUES
 ('1106514392', 'Diego Maradonna'),
@@ -161,7 +161,7 @@ INSERT INTO cliente (id, nombre) VALUES
 ('1002345779', 'Camila Ortiz'),
 ('1002345780', 'Santiago Restrepo');
 
-**Comando para insertar los datos en la tabla factura acueducto**
+- **Comando para insertar los datos en la tabla factura acueducto**
 
 INSERT INTO facturas_acueducto (id_cliente, periodo, consumo_m3, valor_pagar) VALUES
 ('1106514392', '202510', 9, 58500.00),
