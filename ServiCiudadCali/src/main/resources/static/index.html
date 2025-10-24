@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ServiCiudadCali - Deuda Consolidada</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+      body { background-color: #f8f9fa; }
+      .result-card { display: none; }
+      .spinner { display: none; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="#">ServiCiudadCali</a>
+      </div>
+    </nav>
+
+    <main class="container my-4">
+      <div class="row">
+        <div class="col-lg-8 mx-auto">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Consultar deuda consolidada</h5>
+              <p class="card-text">Ingresa el ID del cliente para ver su deuda consolidada de energía y acueducto.</p>
+              <form id="search-form" class="row g-2">
+                <div class="col-sm-8">
+                  <label for="clienteId" class="form-label">ID de cliente</label>
+                  <input type="text" class="form-control" id="clienteId" placeholder="Ej: 12345" required>
+                </div>
+                <div class="col-sm-4 d-flex align-items-end">
+                  <button type="submit" class="btn btn-primary w-100">Consultar</button>
+                </div>
+              </form>
+
+              <div id="loading" class="spinner mt-3">
+                <div class="d-flex align-items-center">
+                  <div class="spinner-border text-primary me-2" role="status"></div>
+                  <strong>Cargando...</strong>
+                </div>
+              </div>
+
+              <div id="error" class="alert alert-danger mt-3" role="alert" style="display:none;"></div>
+
+              <div id="result" class="result-card mt-3">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                      <div class="card-body">
+                        <h6 class="text-secondary mb-2">Cliente</h6>
+                        <div class="row">
+                          <div class="col-md-4"><small class="text-muted">ID</small><div id="r-clienteId" class="fw-semibold"></div></div>
+                          <div class="col-md-4"><small class="text-muted">Nombre</small><div id="r-nombreCliente" class="fw-semibold"></div></div>
+                          <div class="col-md-4"><small class="text-muted">Fecha consulta</small><div id="r-fechaConsulta" class="fw-semibold"></div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                      <div class="card-body">
+                        <h6 class="text-secondary mb-2">Resumen</h6>
+                        <div class="row">
+                          <div class="col-md-4">
+                            <small class="text-muted">Total a pagar</small>
+                            <div id="r-totalAPagar" class="fs-5 fw-bold text-success"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                      <div class="card-body">
+                        <h6 class="text-secondary mb-2">Factura de Energía</h6>
+                        <div class="row gy-2">
+                          <div class="col-12"><small class="text-muted">Periodo</small><div id="r-energia-periodo" class="fw-semibold"></div></div>
+                          <div class="col-6"><small class="text-muted">Consumo</small><div id="r-energia-consumo" class="fw-semibold"></div></div>
+                          <div class="col-6"><small class="text-muted">Valor a pagar</small><div id="r-energia-valor" class="fw-semibold"></div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                      <div class="card-body">
+                        <h6 class="text-secondary mb-2">Factura de Acueducto</h6>
+                        <div class="row gy-2">
+                          <div class="col-12"><small class="text-muted">Periodo</small><div id="r-acueducto-periodo" class="fw-semibold"></div></div>
+                          <div class="col-6"><small class="text-muted">Consumo</small><div id="r-acueducto-consumo" class="fw-semibold"></div></div>
+                          <div class="col-6"><small class="text-muted">Valor a pagar</small><div id="r-acueducto-valor" class="fw-semibold"></div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div id="chart-card" class="card border-0 shadow-sm" style="display:none;">
+                      <div class="card-body">
+                        <h6 class="text-secondary mb-2">Gráfico de Consumo</h6>
+                        <canvas id="consumoChart" height="120"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+  <script>
+      const form = document.getElementById('search-form');
+      const input = document.getElementById('clienteId');
+      const loading = document.getElementById('loading');
+      const errorBox = document.getElementById('error');
+      const result = document.getElementById('result');
+
+      const fmtCurrency = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+      const fmtDate = (iso) => {
+        try { return new Date(iso).toLocaleString('es-CO'); } catch { return iso; }
+      };
+      let consumoChart = null;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = input.value.trim();
+        if (!id) return;
+        setLoading(true);
+        setError();
+        setResult();
+        try {
+          const res = await fetch(`/api/deudaConsolidada/ObtenerDeudaConsolidadaPorClienteId/${encodeURIComponent(id)}`);
+          if (!res.ok) {
+            const contentType = res.headers.get('content-type') || '';
+            let msg = `Error ${res.status}`;
+            if (contentType.includes('application/json')) {
+              try {
+                const data = await res.json();
+                if (data && (data.message || data.error)) {
+                  msg = data.message || data.error;
+                }
+              } catch {}
+            } else {
+              try { msg = await res.text(); } catch {}
+            }
+            throw new Error(msg);
+          }
+          const data = await res.json();
+          renderResult(data);
+        } catch (err) {
+          setError(err.message || 'Ocurrió un error inesperado');
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      function setLoading(v) {
+        loading.style.display = v ? 'block' : 'none';
+      }
+      function setError(msg) {
+        if (!msg) { errorBox.style.display = 'none'; errorBox.textContent = ''; return; }
+        errorBox.style.display = 'block';
+        errorBox.textContent = msg;
+      }
+      function setResult(show = false) {
+        result.style.display = show ? 'block' : 'none';
+      }
+
+      function renderResult(d) {
+        // Defensive checks in case some fields are null/absent
+        const energia = d?.resumenDeuda?.facturaEnergia || {};
+        const acueducto = d?.resumenDeuda?.facturaAcueducto || {};
+
+        document.getElementById('r-clienteId').textContent = d?.clienteId ?? '';
+        document.getElementById('r-nombreCliente').textContent = d?.nombreCliente ?? '';
+        document.getElementById('r-fechaConsulta').textContent = d?.fechaConsulta ? fmtDate(d.fechaConsulta) : '';
+
+        document.getElementById('r-totalAPagar').textContent = d?.totalAPagar != null ? fmtCurrency.format(d.totalAPagar) : '';
+
+        document.getElementById('r-energia-periodo').textContent = energia?.periodo ?? '';
+        document.getElementById('r-energia-consumo').textContent = energia?.consumo != null ? `${energia.consumo} kWh` : '';
+        document.getElementById('r-energia-valor').textContent = energia?.valorPagar != null ? fmtCurrency.format(energia.valorPagar) : '';
+
+        document.getElementById('r-acueducto-periodo').textContent = acueducto?.periodo ?? '';
+        document.getElementById('r-acueducto-consumo').textContent = acueducto?.consumo != null ? `${acueducto.consumo} m³` : '';
+        document.getElementById('r-acueducto-valor').textContent = acueducto?.valorPagar != null ? fmtCurrency.format(acueducto.valorPagar) : '';
+
+        updateChart(energia?.consumo, acueducto?.consumo);
+        setResult(true);
+      }
+
+      function updateChart(energiaConsumo, acueductoConsumo) {
+        if (typeof Chart === 'undefined') {
+          console.warn('Chart.js no cargó; se omite el gráfico.');
+          return;
+        }
+        const card = document.getElementById('chart-card');
+        const eVal = Number.isFinite(Number(energiaConsumo)) ? Number(energiaConsumo) : null;
+        const aVal = Number.isFinite(Number(acueductoConsumo)) ? Number(acueductoConsumo) : null;
+        const hasData = eVal !== null || aVal !== null;
+        if (!hasData) {
+          card && (card.style.display = 'none');
+          if (consumoChart) { consumoChart.destroy(); consumoChart = null; }
+          return;
+        }
+        card && (card.style.display = 'block');
+        const ctx = document.getElementById('consumoChart').getContext('2d');
+        const data = {
+          labels: ['Energía (kWh)', 'Acueducto (m³)'],
+          datasets: [{
+            label: 'Consumo',
+            data: [eVal ?? 0, aVal ?? 0],
+            backgroundColor: ['#0d6efd66', '#20c99766'],
+            borderColor: ['#0d6efd', '#20c997'],
+            borderWidth: 1
+          }]
+        };
+        const options = {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed.y ?? ctx.parsed}`
+              }
+            }
+          },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        };
+        if (consumoChart) {
+          consumoChart.data = data;
+          consumoChart.options = options;
+          consumoChart.update();
+        } else {
+          consumoChart = new Chart(ctx, { type: 'bar', data, options });
+        }
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>
