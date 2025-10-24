@@ -26,21 +26,26 @@ cd ServiCiudadCali
 
 ## Configuración de la base de datos (MySQL 8)
 - **Comando para crear la database**
+```bash
 CREATE DATABASE acueducto;
+```
 
 - **Comando para acceder a la database**
+```bash
 USE acueducto;
+```
 
 - **Comando para crear la tabla cliente**
 
+```bash
 CREATE TABLE cliente (
   id        VARCHAR(20)  NOT NULL,
   nombre    VARCHAR(100) NOT NULL,
   PRIMARY KEY (id)
 );
-
+```
 - **Comando para crear la tabla factura acueducto**
-
+```bash
 CREATE TABLE facturas_acueducto (
   id           BIGINT NOT NULL AUTO_INCREMENT,
   id_cliente   VARCHAR(20) NOT NULL,
@@ -52,9 +57,9 @@ CREATE TABLE facturas_acueducto (
   CONSTRAINT fk_factura_cliente
     FOREIGN KEY (id_cliente) REFERENCES cliente(id)
 );
-
+```
 - **Comando para insertar los datos en la tabla cliente**
-
+```bash
 INSERT INTO cliente (id, nombre) VALUES
 ('1106514392', 'Diego Maradonna'),
 ('1002345678', 'Juan Pérez'),
@@ -160,9 +165,9 @@ INSERT INTO cliente (id, nombre) VALUES
 ('1002345778', 'Julián Correa'),
 ('1002345779', 'Camila Ortiz'),
 ('1002345780', 'Santiago Restrepo');
-
+```
 - **Comando para insertar los datos en la tabla factura acueducto**
-
+```bash
 INSERT INTO facturas_acueducto (id_cliente, periodo, consumo_m3, valor_pagar) VALUES
 ('1106514392', '202510', 9, 58500.00),
 ('1002345678', '202510', 12, 78000.00),
@@ -268,3 +273,4 @@ INSERT INTO facturas_acueducto (id_cliente, periodo, consumo_m3, valor_pagar) VA
 ('1002345778', '202510', 16, 104000.00),
 ('1002345779', '202510', 20, 130000.00),
 ('1002345780', '202510', 14, 91000.00);
+```
