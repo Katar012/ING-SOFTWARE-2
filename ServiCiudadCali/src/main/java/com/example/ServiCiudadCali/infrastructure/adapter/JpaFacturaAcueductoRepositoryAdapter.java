@@ -1,8 +1,9 @@
-package com.example.ServiCiudadCali.infrastructure.repository;
+package com.example.ServiCiudadCali.infrastructure.adapter;
 
 import com.example.ServiCiudadCali.domain.model.FacturaAcueducto;
 import com.example.ServiCiudadCali.domain.ports.outs.AcueductoPort;
 import com.example.ServiCiudadCali.infrastructure.entity.FacturaAcueductoEntity;
+import com.example.ServiCiudadCali.infrastructure.repository.JpaFacturaAcueductoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 

@@ -1,4 +1,4 @@
-package com.example.ServiCiudadCali.infrastructure.repository;
+package com.example.ServiCiudadCali.infrastructure.adapter;
 
 import com.example.ServiCiudadCali.domain.model.FacturaEnergia;
 import com.example.ServiCiudadCali.domain.ports.outs.EnergiaPort;
