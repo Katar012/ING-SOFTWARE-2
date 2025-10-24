@@ -22,7 +22,11 @@ Devuelve un JSON unificado con el nombre del cliente, la fecha de consulta, el r
 ```bash
 git clone https://github.com/Katar012/ING-SOFTWARE-2.git
 cd ServiCiudadCali
+mvn spring-boot:run
 ```
+
+## Entrar al fronted
+Desde el navegador escribir localhost:8080 para acceder al frontend de la aplicación.
 
 ## Configuración de la base de datos (MySQL 8)
 - **Comando para crear la database**
