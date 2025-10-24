@@ -20,6 +20,6 @@ Devuelve un JSON unificado con el nombre del cliente, la fecha de consulta, el r
 ## Clonar y compilar
 
 ```bash
-git clone <URL_DE_TU_REPO>
+git clone https://github.com/Katar012/ING-SOFTWARE-2
 cd ServiCiudadCali
 mvn clean package
