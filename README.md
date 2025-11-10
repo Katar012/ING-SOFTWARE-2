@@ -278,3 +278,5 @@ INSERT INTO facturas_acueducto (id_cliente, periodo, consumo_m3, valor_pagar) VA
 ('1002345779', '202510', 20, 130000.00),
 ('1002345780', '202510', 14, 91000.00);
 ```
+
+...
