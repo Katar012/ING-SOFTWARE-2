@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: acueducto-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: acueducto
+      TZ: America/Bogota
+    ports:
+      - "3306:3306"               # expone MySQL local (opcional)
+    volumes:
+      - ./mysql/init:/docker-entrypoint-initdb.d  # ejecuta 01-init.sql al iniciar
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: servi-ciudad-cali
+    ports:
+      - "8080:8080"               # expone tu API
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/acueducto?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      - mysql
