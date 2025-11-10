@@ -20,14 +20,20 @@ jobs:
                   java-version: '21'
 
             - name: Compilar con Maven
-              run: mvn -B package --file pom.xml
+              run: |
+                cd ServiCiudadCali
+                mvn -B package
 
             - name: Ejecutar pruebas con Maven
-              run: mvn test
+              run: |
+                cd ServiCiudadCali
+                mvn test
 
             - name: Construir imagen Docker
-              run: docker build -t mi-app:latest .
-
+              run: |
+                cd ServiCiudadCali
+                docker build -t mi-app:latest .
+                
             - name: Probar que el contenedor arranca
               run: docker run --rm -p 8080:8080 mi-app:latest
 
