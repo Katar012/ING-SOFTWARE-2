@@ -95,5 +95,5 @@ Flujo end-to-end (resumen):
 - I — Segregación de Interfaces: puertos pequeños y específicos por necesidad (`obtenerPorCliente`, `obtenerPorId`), evitando interfaces “gordas”.
 - D — Inversión de Dependencias: el dominio depende de abstracciones (puertos), no de detalles (JPA/archivos); Spring inyecta implementaciones en tiempo de ejecución.
 
-Probando CI
+Probando CI POR SEGUNDA VEZ
 
