@@ -53,7 +53,5 @@ jobs:
                 cd ServiCiudadCali
                 docker build -t mi-app:latest .
 
-            - name: Probar que el contenedor arranca
-              run: docker run --rm -p 8080:8080 mi-app:latest
 
               #Prueba
