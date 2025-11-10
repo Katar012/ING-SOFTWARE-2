@@ -9,6 +9,20 @@ on:
 jobs:
     build:
         runs-on: ubuntu-latest
+        services:
+          mysql:
+            image: mysql:8.0
+            env:
+              MYSQL_ROOT_PASSWORD: root
+              MYSQL_DATABASE: acueducto
+              MYSQL_USER: root
+              MYSQL_PASSWORD: root
+            ports: ["3306:3306"]
+            options: >-
+              --health-cmd="mysqladmin ping --silent"
+              --health-interval=10s
+              --health-timeout=5s
+              --health-retries=3
         steps:
             - name: Checkout código
               uses: actions/checkout@v4
@@ -18,6 +32,13 @@ jobs:
               with:
                   distribution: 'temurin'
                   java-version: '21'
+
+            - name: Esperar a que MySQL esté listo
+              run: |
+                for i in {1..30}; do
+                  nc -z localhost 3306 && echo "MySQL está listo" && break
+                  sleep 2
+                done
 
             - name: Compilar con Maven
               run: |
@@ -33,7 +54,7 @@ jobs:
               run: |
                 cd ServiCiudadCali
                 docker build -t mi-app:latest .
-                
+
             - name: Probar que el contenedor arranca
               run: docker run --rm -p 8080:8080 mi-app:latest
 
