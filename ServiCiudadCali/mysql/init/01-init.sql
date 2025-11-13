@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS acueducto
+CREATE DATABASE IF NOT EXISTS acueducto;
 
 USE acueducto;
 
@@ -22,7 +22,7 @@ CREATE TABLE facturas_acueducto (
   CONSTRAINT fk_factura_cliente
     FOREIGN KEY (id_cliente) REFERENCES cliente(id)
     ON DELETE CASCADE
-    ON UPDATE CASCADE,
+    ON UPDATE CASCADE
 );
 
 INSERT INTO cliente (id, nombre) VALUES

@@ -67,3 +67,13 @@ Thumbs.db
 bin/
 .nb-gradle/
 .nbproject/private/
+
+# ==========================================
+# Terraform - Solo valores y estado
+# ==========================================
+**/*.tfvars
+**/*.tfvars.json
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+**/*.tfplan
