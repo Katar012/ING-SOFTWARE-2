@@ -1,35 +1,38 @@
 terraform {
-  required_version = ">= 1.0"
-
+  required_version = ">= 1.5.0"
   required_providers {
     render = {
-      source  = "renderinc/render"
-      version = "~> 0.1.0"
+      source  = "render-oss/render"
+      version = ">= 1.7.0"
     }
   }
 }
 
 provider "render" {
-  api_key = var.render_api_key
+  api_key  = var.render_api_key
+  owner_id = var.render_owner_id   # usr-... o tea-...
 }
 
-resource "render_service" "serviciudadcali_app" {
-  name        = var.app_name
-  type        = "web_service"
-  repo        = var.github_repo
-  env         = "docker"
-  plan        = "starter"
-  branch      = "Vila"
-  auto_deploy = true
+resource "render_web_service" "api" {
+  name   = var.app_name
+  plan   = var.render_plan
+  region = var.render_region
 
-  env_vars = {
-    SPRING_DATASOURCE_URL      = var.database_url
-    SPRING_DATASOURCE_USERNAME = var.db_username
-    SPRING_DATASOURCE_PASSWORD = var.db_password
-    SPRING_PROFILES_ACTIVE     = "prod"
-    SPRING_JPA_SHOW_SQL        = "false"
-    SERVER_PORT                = "8080"
+  runtime_source = {
+    type = "git"
+    docker = {
+      dockerfile_path = "ServiCiudadCali/Dockerfile"  # <-- Especifica la ruta completa
+      repo_url        = var.github_repo
+      branch          = var.github_branch
+      root_dir        = "ServiCiudadCali"             # <-- Directorio de trabajo
+    }
   }
 
-
+  env_vars = {
+    SPRING_PROFILES_ACTIVE     = { value = "prod" }
+    SPRING_DATASOURCE_URL      = { value = var.jdbc_url }
+    SPRING_DATASOURCE_USERNAME = { value = var.db_username }
+    SPRING_DATASOURCE_PASSWORD = { value = var.db_password }
+    SERVER_PORT                = { value = "8080" }
+  }
 }

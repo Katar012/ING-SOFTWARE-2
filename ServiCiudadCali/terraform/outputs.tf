@@ -1,14 +1,11 @@
-output "app_url" {
-  description = "URL de la aplicación desplegada"
-  value       = "https://${render_service.serviciudadcali_app.name}.onrender.com"
-}
-
-output "service_id" {
-  description = "ID del servicio en Render"
-  value       = render_service.serviciudadcali_app.id
-}
-
 output "service_name" {
-  description = "Nombre del servicio en Render"
-  value       = render_service.serviciudadcali_app.name
+  description = "Nombre del servicio"
+  value       = render_web_service.api.name
+}
+
+# Render suele mapear <name>.onrender.com; usa este 'guess' si el provider
+# no expone directamente la URL del servicio.
+output "app_url_guess" {
+  description = "URL probable"
+  value       = "https://${render_web_service.api.name}.onrender.com"
 }
