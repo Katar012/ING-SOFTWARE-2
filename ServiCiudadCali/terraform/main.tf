@@ -10,7 +10,7 @@ terraform {
 
 provider "render" {
   api_key  = var.render_api_key
-  owner_id = var.render_owner_id   # usr-... o tea-...
+  owner_id = var.render_owner_id
 }
 
 resource "render_web_service" "api" {
@@ -21,10 +21,10 @@ resource "render_web_service" "api" {
   runtime_source = {
     type = "git"
     docker = {
-      dockerfile_path = "ServiCiudadCali/Dockerfile"  # <-- Especifica la ruta completa
+      dockerfile_path = "ServiCiudadCali/Dockerfile"
       repo_url        = var.github_repo
       branch          = var.github_branch
-      root_dir        = "ServiCiudadCali"             # <-- Directorio de trabajo
+      root_dir        = "ServiCiudadCali"
     }
   }
 

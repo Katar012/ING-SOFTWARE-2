@@ -13,11 +13,11 @@ variable "app_name"      {
   }
 variable "github_repo"   {
   type = string
-  default = "https://github.com/Katar012/ING-SOFTWARE-2.git"
+  default = "https://github.com/Katar012/ING-SOFTWARE-2"
   }
 variable "github_branch" {
   type = string
-  default = "Vila"
+  default = "main"
   }
 variable "render_plan"   {
   type = string
@@ -28,11 +28,10 @@ variable "render_region" {
   default = "oregon"
   }
 
-# IMPORTANTE: usa formato JDBC correcto
 variable "jdbc_url" {
   type = string
   sensitive = true 
-  }   # ej: jdbc:mysql://host:port/db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+  }  
 variable "db_username" {
   type = string
   sensitive = true
