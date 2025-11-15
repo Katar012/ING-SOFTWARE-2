@@ -71,9 +71,9 @@ bin/
 # ==========================================
 # Terraform - Solo valores y estado
 # ==========================================
-**/*.tfvars
-**/*.tfvars.json
-**/.terraform/
-**/*.tfstate
-**/*.tfstate.backup
-**/*.tfplan
+#**/*.tfvars
+#**/*.tfvars.json
+#**/.terraform/
+#**/*.tfstate
+#**/*.tfstate.backup
+#**/*.tfplan

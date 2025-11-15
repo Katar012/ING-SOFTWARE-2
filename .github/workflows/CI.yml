@@ -54,4 +54,11 @@ jobs:
                 docker build -t mi-app:latest -f ServiCiudadCali/Dockerfile .
 
 
-              #Prueba
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        steps:
+            - name: Trigger Render Deploy
+              run: |
+                curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

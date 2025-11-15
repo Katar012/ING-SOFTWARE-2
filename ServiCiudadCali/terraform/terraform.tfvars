@@ -1,0 +1,6 @@
+render_api_key = "rnd_hXytn3ZJiWKWAXgzil56Z3Au9SV5"
+jdbc_url   = "jdbc:mysql://root:HhWQpQzAZmbueKNUclTjXhGitMgWAPLK@ballast.proxy.rlwy.net:29202/railway"
+db_username = "root"
+db_password = "HhWQpQzAZmbueKNUclTjXhGitMgWAPLK"
+render_owner_id = "tea-d4alctjipnbc73acmcpg"
+github_repo = "https://github.com/Katar012/ING-SOFTWARE-2"
