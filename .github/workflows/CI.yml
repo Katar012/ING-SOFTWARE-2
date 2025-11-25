@@ -1,4 +1,4 @@
-name: Pipeline CI
+name: Pipeline CI/CD
 
 on:
   push:
@@ -41,12 +41,32 @@ jobs:
             - name: Compilar con Maven
               run: |
                 cd ServiCiudadCali
-                mvn -B package
+                mvn -B clean compile
 
             - name: Ejecutar pruebas con Maven
               run: |
                 cd ServiCiudadCali
                 mvn test
+
+            - name: Verificar cobertura mínima del 80% con jacoco
+              run: |
+                cd ServiCiudadCali
+                mvn verify
+                echo "Cumple con el umbral de 80% de cobertura."
+
+            - name: Generar reporte de cobertura JaCoCo
+              if: always()  #Se ejecuta siempre, incluso si hay errores
+              run: |
+                cd ServiCiudadCali
+                mvn jacoco:report 
+
+            - name: Subir reporte de cobertura como artefacto
+              if: always()  # ← Se ejecuta siempre
+              uses: actions/upload-artifact@v4
+              with:
+                name: jacoco-coverage-report
+                path: ServiCiudadCali/target/site/jacoco/
+                retention-days: 5
 
             - name: Construir imagen Docker
               run: |
