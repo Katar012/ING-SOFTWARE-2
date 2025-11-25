@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.ServiCiudadCali.application.dto.DeudaConsolidadaDTO;
@@ -24,6 +25,7 @@ import com.example.ServiCiudadCali.domain.exception.ResourceNotFoundException;
 import com.example.ServiCiudadCali.domain.ports.in.ConsultarFacturasClienteUseCase;
 
 @WebMvcTest(DeudaConsolidadaController.class)
+@ActiveProfiles("test") 
 class DeudaConsolidadaControllerTest {
 
     @Autowired
