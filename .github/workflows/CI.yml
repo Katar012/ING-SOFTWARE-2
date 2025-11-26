@@ -155,41 +155,33 @@ jobs:
           name: ${{ env.STABLE_IMAGE_NAME }}
           path: ./stable-image/
 
-      # NUEVO: Verificar SI REALMENTE se descargó
-      - name: 🔍 Verificar descarga del artefacto
-        id: check-download
-        run: |
-          echo "📊 Verificando descarga del artefacto..."
-          echo "Directorio: $(pwd)"
-          echo "Contenido de ./stable-image/:"
-          ls -la ./stable-image/ || echo "❌ Directorio no existe"
-          
-          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
-            echo "✅ Artefacto descargado correctamente"
-            echo "📦 Tamaño: $(du -h ./stable-image/serviciudadcali-stable.tar.gz)"
-            echo "downloaded=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Artefacto NO descargado"
-            echo "ℹ️  Step download-stable outcome: ${{ steps.download-stable.outcome }}"
-            echo "downloaded=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: 🔍 Verificar si hay versión STABLE previa
         id: check-stable
         run: |
-          # Usar el output del step anterior
-          if [ "${{ steps.check-download.outputs.downloaded }}" == "true" ]; then
+          echo "🔍 Verificando descarga del artefacto..."
+          echo ""
+          echo "📊 Información del step de descarga:"
+          echo "  - Outcome: ${{ steps.download-stable.outcome }}"
+          echo "  - Conclusion: ${{ steps.download-stable.conclusion }}"
+          echo ""
+          
+          echo "📂 Contenido del directorio ./stable-image/:"
+          ls -lah ./stable-image/ 2>/dev/null || echo "❌ Directorio vacío o no existe"
+          echo ""
+          
+          # Verificar si el archivo tar.gz existe
+          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
+            FILE_SIZE=$(du -h ./stable-image/serviciudadcali-stable.tar.gz | cut -f1)
+            echo "✅ Artefacto STABLE encontrado"
+            echo "📦 Tamaño: $FILE_SIZE"
             echo "has_stable=true" >> $GITHUB_OUTPUT
-            echo "✅ Se encontró versión STABLE anterior"
           else
-            echo "has_stable=false" >> $GITHUB_OUTPUT
             echo "ℹ️  No hay versión STABLE anterior (primer despliegue)"
-            
-            # Debug: Listar artefactos disponibles
             echo ""
-            echo "🔍 Debug: Información del workflow anterior"
-            echo "Commit anterior: ${{ github.event.before }}"
-            echo "Commit actual: ${{ github.sha }}"
+            echo "🔍 Debug: Información de commits"
+            echo "  - Commit anterior: ${{ github.event.before }}"
+            echo "  - Commit actual: ${{ github.sha }}"
+            echo "has_stable=false" >> $GITHUB_OUTPUT
           fi
 
       # ============================================================
