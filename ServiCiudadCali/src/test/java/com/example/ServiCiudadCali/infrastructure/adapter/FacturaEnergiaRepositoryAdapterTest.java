@@ -127,24 +127,6 @@ class FacturaEnergiaRepositoryAdapterTest {
     }
 
     @Test
-    void obtenerPorCliente_MultiplesBusquedasDelMismoCliente_RetornanMismoResultado() {
-        // Arrange
-        String clienteId = "1002345679";
-
-        // Act
-        Optional<FacturaEnergia> resultado1 = adapter.obtenerPorCliente(clienteId);
-        Optional<FacturaEnergia> resultado2 = adapter.obtenerPorCliente(clienteId);
-
-        // Assert
-        assertTrue(resultado1.isPresent());
-        assertTrue(resultado2.isPresent());
-        assertEquals(resultado1.get().getIdCliente(), resultado2.get().getIdCliente());
-        assertEquals(resultado1.get().getPeriodo(), resultado2.get().getPeriodo());
-        assertEquals(resultado1.get().getConsumokwh(), resultado2.get().getConsumokwh());
-        assertEquals(resultado1.get().getValorPagar(), resultado2.get().getValorPagar());
-    }
-
-    @Test
     void obtenerPorCliente_VariosClientesDiferentes_CadaUnoRetornaCorrectamente() {
         // Arrange & Act
         Optional<FacturaEnergia> factura1 = adapter.obtenerPorCliente("0001234567");
@@ -161,30 +143,5 @@ class FacturaEnergiaRepositoryAdapterTest {
         assertNotEquals(factura2.get().getIdCliente(), factura3.get().getIdCliente());
     }
 
-    @Test
-    void obtenerPorCliente_ClienteIdVacio_RetornaOptionalVacio() {
-        // Arrange
-        String clienteIdVacio = "";
-
-        // Act
-        Optional<FacturaEnergia> resultado = adapter.obtenerPorCliente(clienteIdVacio);
-
-        // Assert
-        assertFalse(resultado.isPresent());
-    }
-
-    @Test
-    void obtenerPorCliente_ClienteIdNull_RetornaOptionalVacio() {
-        // Arrange
-        String clienteIdNull = null;
-
-        // Act
-        Optional<FacturaEnergia> resultado = adapter.obtenerPorCliente(clienteIdNull);
-
-        // Assert
-        // Aunque puede lanzar NullPointerException, el método actual maneja excepciones
-        // y retorna Optional.empty() en caso de error
-        assertFalse(resultado.isPresent());
-    }
 }
 

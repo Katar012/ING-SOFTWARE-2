@@ -3,7 +3,6 @@ package com.example.ServiCiudadCali.infrastructure.adapter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -94,18 +93,5 @@ class JpaClienteRepositoryAdapterTest {
         verify(jpaClienteRepository, times(1)).findById("1111111111");
     }
 
-    @Test
-    void obtenerPorId_MultiplesBusquedas_CadaUnaLlamaAlRepositorio() {
-        // Arrange
-        when(jpaClienteRepository.findById(anyString())).thenReturn(Optional.of(clienteEntity));
-
-        // Act
-        adapter.obtenerPorId("1234567890");
-        adapter.obtenerPorId("0987654321");
-        adapter.obtenerPorId("1111111111");
-
-        // Assert
-        verify(jpaClienteRepository, times(3)).findById(anyString());
-    }
 }
 

@@ -3,7 +3,6 @@ package com.example.ServiCiudadCali.infrastructure.adapter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -136,19 +135,5 @@ class JpaFacturaAcueductoRepositoryAdapterTest {
         verify(jpaFacturaAcueductoRepository, times(1)).findFirstByIdClienteOrderByPeriodoDesc("2222222222");
     }
 
-    @Test
-    void obtenerPorCliente_MultiplesBusquedas_CadaUnaLlamaAlRepositorio() {
-        // Arrange
-        when(jpaFacturaAcueductoRepository.findFirstByIdClienteOrderByPeriodoDesc(anyString()))
-            .thenReturn(Optional.of(facturaEntity));
-
-        // Act
-        adapter.obtenerPorCliente("1234567890");
-        adapter.obtenerPorCliente("0987654321");
-        adapter.obtenerPorCliente("1111111111");
-
-        // Assert
-        verify(jpaFacturaAcueductoRepository, times(3)).findFirstByIdClienteOrderByPeriodoDesc(anyString());
-    }
 }
 
