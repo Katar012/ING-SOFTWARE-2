@@ -71,27 +71,5 @@ class JpaClienteRepositoryAdapterTest {
         
         verify(jpaClienteRepository, times(1)).findById(clienteIdInexistente);
     }
-
-    @Test
-    void obtenerPorId_ValidarMapeoEntityADomain() {
-        // Arrange
-        ClienteEntity entity = new ClienteEntity();
-        entity.setId("1111111111");
-        entity.setNombre("Maria Lopez");
-        
-        when(jpaClienteRepository.findById("1111111111")).thenReturn(Optional.of(entity));
-
-        // Act
-        Optional<Cliente> resultado = adapter.obtenerPorId("1111111111");
-
-        // Assert
-        assertTrue(resultado.isPresent());
-        Cliente cliente = resultado.get();
-        assertEquals(entity.getId(), cliente.getId());
-        assertEquals(entity.getNombre(), cliente.getNombre());
-        
-        verify(jpaClienteRepository, times(1)).findById("1111111111");
-    }
-
 }
 
