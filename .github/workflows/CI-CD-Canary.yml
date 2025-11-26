@@ -13,7 +13,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: joseligos/ingsoft2/serviciudadcali
+  IMAGE_NAME: katar012/ing-software-2/serviciudadcali
   COVERAGE_THRESHOLD: 80
 
 jobs:

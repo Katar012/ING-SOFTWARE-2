@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 VERSION=${1:-$(git describe --tags --always --dirty 2>/dev/null || echo "dev-$(date +%Y%m%d-%H%M%S)")}
 CANARY_PORT=8081
 REGISTRY="ghcr.io"
-IMAGE_NAME="joseligos/ingsoft2/serviciudadcali"
+IMAGE_NAME="katar012/ing-software-2/serviciudadcali"
 
 echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Despliegue Canary - ServiCiudadCali${NC}"

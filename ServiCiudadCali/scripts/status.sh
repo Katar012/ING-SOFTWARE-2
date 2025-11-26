@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 STABLE_PORT=8080
 CANARY_PORT=8081
 REGISTRY="ghcr.io"
-IMAGE_NAME="joseligos/ingsoft2/serviciudadcali"
+IMAGE_NAME="katar012/ing-software-2/serviciudadcali"
 
 echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Estado del Sistema${NC}"
