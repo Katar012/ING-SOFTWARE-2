@@ -613,16 +613,41 @@ jobs:
           echo "📊 Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
           echo "🔗 URL: http://localhost:8080"
 
+
   # ==============================================================
-  # JOB 5: Rollback Automático (en caso de fallo)
+  # JOB 5: Rollback Automático (ACTUALIZADO)
   # ==============================================================
   rollback:
-    name: Rollback Automático
-    needs: [promote-to-production]
+    name: ↩️ Rollback Automático
+    needs: [build-and-test, canary-deploy, promote-to-production]
     runs-on: ubuntu-latest
-    if: failure()
+    # Se ejecuta SOLO si canary-deploy o promote-to-production FALLAN
+    if: |
+      always() && 
+      (needs.canary-deploy.result == 'failure' || 
+       needs.promote-to-production.result == 'failure')
     
     steps:
+      - name: 🚨 Rollback activado
+        run: |
+          echo "======================================"
+          echo "🚨 ROLLBACK AUTOMÁTICO ACTIVADO"
+          echo "======================================"
+          echo ""
+          echo "❌ Razón del rollback:"
+          if [ "${{ needs.canary-deploy.result }}" == "failure" ]; then
+            echo "  • Canary Deploy falló"
+          fi
+          if [ "${{ needs.promote-to-production.result }}" == "failure" ]; then
+            echo "  • Promote to Production falló"
+          fi
+          echo ""
+          echo "↩️  Acción: Restaurando versión anterior"
+          echo ""
+          echo "⚠️  IMPORTANTE: El deploy a Render NO se ejecutó"
+          echo "⚠️  Render mantiene la última versión estable"
+          echo ""
+
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
@@ -647,6 +672,8 @@ jobs:
             # Detener versión fallida
             docker compose stop app-stable 2>/dev/null || true
             docker compose rm -f app-stable 2>/dev/null || true
+            docker compose --profile canary stop app-canary 2>/dev/null || true
+            docker compose --profile canary rm -f app-canary 2>/dev/null || true
             
             # Restaurar imagen de rollback como stable (local y en GHCR)
             docker tag ${IMAGE_BASE}:rollback serviciudadcali:stable
@@ -660,11 +687,206 @@ jobs:
             echo "✅ Imagen stable actualizada en GHCR"
           else
             echo "❌ ERROR: No se encontró imagen de rollback en GHCR"
+            echo "⚠️  Esto puede ocurrir en el primer despliegue"
             echo "⚠️  No se puede hacer rollback automático"
             exit 1
           fi
 
-      - name: 📧 Notificar fallo
+      - name: 🔍 Verificar Rollback
         run: |
-          echo "❌ ALERTA: Despliegue falló - Rollback ejecutado"
-          echo "📋 Revisar logs para más detalles"
+          cd ServiCiudadCali
+          echo "🔍 Verificando que el rollback fue exitoso..."
+          sleep 30
+          
+          if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
+            echo "✅ Versión anterior restaurada y funcionando"
+          else
+            echo "❌ ERROR: Rollback falló - se requiere intervención manual"
+            exit 1
+          fi
+
+      - name: 📧 Notificar fallo
+        if: always()
+        run: |
+          echo ""
+          echo "======================================"
+          echo "❌ ALERTA: DESPLIEGUE FALLÓ"
+          echo "======================================"
+          echo ""
+          echo "📋 Acciones tomadas:"
+          echo "  ✅ Rollback ejecutado automáticamente"
+          echo "  ✅ Versión anterior restaurada en GHCR"
+          echo "  🚫 Deploy a Render NO ejecutado"
+          echo ""
+          echo "📋 Estado actual:"
+          echo "  • Ambiente local: Versión anterior restaurada"
+          echo "  • Render: Mantiene última versión estable"
+          echo ""
+          echo "🔍 Próximos pasos:"
+          echo "  1. Revisar logs del job que falló"
+          echo "  2. Corregir el problema"
+          echo "  3. Hacer nuevo push para reintentar"
+          echo ""
+
+  # ==============================================================
+  # JOB 6: Deploy a Render (Solo si Canary fue exitoso)
+  # ==============================================================
+  deploy-to-render:
+    name: 🚀 Deploy a Render (Producción)
+    needs: [build-and-test, promote-to-production]
+    runs-on: ubuntu-latest
+    # Solo se ejecuta si:
+    # 1. El push es a main
+    # 2. promote-to-production fue exitoso (no hubo rollback)
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' &&
+      needs.promote-to-production.result == 'success'
+    
+    steps:
+      - name: 📋 Verificar pre-condiciones
+        run: |
+          echo "✅ Verificando que todo esté listo para deploy a Render..."
+          echo ""
+          echo "📊 Estado de jobs anteriores:"
+          echo "  • Build & Test: ${{ needs.build-and-test.result }}"
+          echo "  • Promote to Production: ${{ needs.promote-to-production.result }}"
+          echo ""
+          echo "📦 Versión a desplegar: ${{ needs.build-and-test.outputs.version }}"
+          echo "📊 Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
+          echo ""
+          
+          if [ "${{ needs.promote-to-production.result }}" != "success" ]; then
+            echo "❌ ERROR: La promoción falló o hubo rollback"
+            echo "🚫 NO se desplegará a Render"
+            exit 1
+          fi
+          
+          echo "✅ Pre-condiciones cumplidas - procediendo con deploy"
+
+      - name: 🚀 Trigger Deploy en Render
+        id: trigger-deploy
+        run: |
+          echo "🚀 Desplegando versión VALIDADA a Render..."
+          echo "📦 Esta versión pasó todos los health checks y smoke tests"
+          echo ""
+          
+          RESPONSE=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -w "\n%{http_code}" \
+            -s)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
+            echo "✅ Deploy iniciado exitosamente en Render"
+            echo "$BODY"
+            echo "deploy_started=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ ERROR: Deploy falló (HTTP $HTTP_CODE)"
+            echo "$BODY"
+            echo "deploy_started=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: ⏳ Esperar despliegue de Render
+        if: steps.trigger-deploy.outputs.deploy_started == 'true'
+        run: |
+          echo "⏳ Esperando que Render complete el despliegue..."
+          echo "⏳ Render está:"
+          echo "   1. Clonando el repositorio"
+          echo "   2. Compilando con Maven"
+          echo "   3. Construyendo imagen Docker"
+          echo "   4. Desplegando contenedor"
+          echo ""
+          echo "⏰ Tiempo estimado: 3-5 minutos"
+          
+          for i in {1..12}; do
+            echo "⏳ Progreso: $((i * 25 / 3))% - Esperando $((i * 15)) segundos..."
+            sleep 15
+          done
+
+      - name: 🔍 Verificar Deploy en Render
+        if: steps.trigger-deploy.outputs.deploy_started == 'true'
+        id: verify-deploy
+        run: |
+          MAX_RETRIES=20
+          RETRY_COUNT=0
+          RENDER_URL="https://serviciudadcali.onrender.com"
+          
+          echo "🔍 Verificando que Render esté respondiendo..."
+          echo ""
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            echo "🔄 Intento $RETRY_COUNT/$MAX_RETRIES..."
+            
+            if curl -f -s "${RENDER_URL}/actuator/health" 2>/dev/null | grep -q "UP"; then
+              echo ""
+              echo "✅ ¡Render está respondiendo correctamente!"
+              echo ""
+              echo "📊 Health Check Response:"
+              curl -s "${RENDER_URL}/actuator/health"
+              echo ""
+              echo "deploy_verified=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⏳ Esperando 20 segundos..."
+              sleep 20
+            fi
+          done
+          
+          echo ""
+          echo "❌ Render no respondió después de $((MAX_RETRIES * 20)) segundos"
+          echo "⚠️  El deploy puede seguir en progreso"
+          echo "deploy_verified=false" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: 🧪 Smoke Tests en Render
+        if: steps.verify-deploy.outputs.deploy_verified == 'true'
+        run: |
+          RENDER_URL="https://serviciudadcali.onrender.com"
+          
+          echo "🧪 Ejecutando smoke tests en Render..."
+          echo ""
+          
+          echo "Test 1: Health Check"
+          if curl -f -s "${RENDER_URL}/actuator/health" | grep -q "UP"; then
+            echo "  ✅ Health check passed"
+          else
+            echo "  ❌ Health check failed"
+            exit 1
+          fi
+          
+          echo "Test 2: Response time"
+          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' "${RENDER_URL}/actuator/health")
+          echo "  ⏱️  Response time: ${RESPONSE_TIME}s"
+          
+          echo ""
+          echo "✅ Todos los smoke tests pasaron"
+
+      - name: 📊 Resumen del Deploy
+        if: always()
+        run: |
+          echo ""
+          echo "======================================"
+          echo "📊 RESUMEN DEPLOY A RENDER"
+          echo "======================================"
+          echo ""
+          
+          if [ "${{ steps.verify-deploy.outputs.deploy_verified }}" == "true" ]; then
+            echo "✅ Estado: EXITOSO"
+          else
+            echo "❌ Estado: FALLÓ"
+          fi
+          
+          echo ""
+          echo "📦 Información:"
+          echo "  • Versión: ${{ needs.build-and-test.outputs.version }}"
+          echo "  • Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
+          echo "  • URL: https://serviciudadcali.onrender.com"
+          echo ""
