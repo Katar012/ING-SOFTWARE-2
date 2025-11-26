@@ -155,15 +155,41 @@ jobs:
           name: ${{ env.STABLE_IMAGE_NAME }}
           path: ./stable-image/
 
+      # NUEVO: Verificar SI REALMENTE se descargó
+      - name: 🔍 Verificar descarga del artefacto
+        id: check-download
+        run: |
+          echo "📊 Verificando descarga del artefacto..."
+          echo "Directorio: $(pwd)"
+          echo "Contenido de ./stable-image/:"
+          ls -la ./stable-image/ || echo "❌ Directorio no existe"
+          
+          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
+            echo "✅ Artefacto descargado correctamente"
+            echo "📦 Tamaño: $(du -h ./stable-image/serviciudadcali-stable.tar.gz)"
+            echo "downloaded=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Artefacto NO descargado"
+            echo "ℹ️  Step download-stable outcome: ${{ steps.download-stable.outcome }}"
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: 🔍 Verificar si hay versión STABLE previa
         id: check-stable
         run: |
-          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
+          # Usar el output del step anterior
+          if [ "${{ steps.check-download.outputs.downloaded }}" == "true" ]; then
             echo "has_stable=true" >> $GITHUB_OUTPUT
             echo "✅ Se encontró versión STABLE anterior"
           else
             echo "has_stable=false" >> $GITHUB_OUTPUT
             echo "ℹ️  No hay versión STABLE anterior (primer despliegue)"
+            
+            # Debug: Listar artefactos disponibles
+            echo ""
+            echo "🔍 Debug: Información del workflow anterior"
+            echo "Commit anterior: ${{ github.event.before }}"
+            echo "Commit actual: ${{ github.sha }}"
           fi
 
       # ============================================================
@@ -505,61 +531,121 @@ jobs:
     name: 🚀 Deploy a Producción (Render)
     needs: [build-and-test, canary-validation]
     runs-on: ubuntu-latest
-    # CAMBIO AQUÍ: Usar rama Vila en lugar de main
     if: github.event_name == 'push' && github.ref == 'refs/heads/Vila'
     
     steps:
+      - name: 🔍 Verificar webhook configurado
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "❌ ERROR: RENDER_DEPLOY_HOOK_URL no está configurado"
+            echo "ℹ️  Configúralo en: Settings → Secrets → Actions"
+            exit 1
+          fi
+          
+          echo "✅ Webhook URL configurado"
+          # Mostrar solo los primeros caracteres (seguridad)
+          echo "URL: ${RENDER_DEPLOY_HOOK_URL:0:30}..."
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+
       - name: 🚀 Trigger Render Deploy
         run: |
           echo "🚀 Desplegando a Render..."
           echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
+          echo "🔗 Commit: ${{ github.sha }}"
+          echo ""
           
-          response=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" -w "\n%{http_code}")
+          # Hacer POST al webhook con más verbosidad
+          echo "📡 Enviando webhook a Render..."
+          
+          response=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -w "\n%{http_code}" \
+            -v 2>&1)
+          
+          # Mostrar respuesta completa (para debug)
+          echo "📊 Respuesta completa:"
+          echo "$response"
+          echo ""
+          
+          # Extraer código HTTP
           http_code=$(echo "$response" | tail -n1)
+          
+          echo "📊 Código HTTP: $http_code"
           
           if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ]; then
             echo "✅ Deploy a Render iniciado exitosamente"
           else
             echo "❌ Error al iniciar deploy (código: $http_code)"
+            echo "ℹ️  Verifica:"
+            echo "   1. El webhook URL es correcto"
+            echo "   2. El servicio en Render existe"
+            echo "   3. El webhook no está deshabilitado"
             exit 1
           fi
 
       - name: ⏳ Esperar despliegue en Render
         run: |
-          echo "⏳ Esperando 60 segundos para que Render despliegue..."
-          sleep 60
+          echo "⏳ Esperando 180 segundos para que Render despliegue..."
+          echo "ℹ️  Render necesita:"
+          echo "   - Build Docker (2-3 min)"
+          echo "   - Deploy contenedor (1-2 min)"
+          echo "   - Iniciar Spring Boot (1-2 min)"
+          sleep 180
 
       - name: 🔍 Verificar deploy en Render
+        continue-on-error: true
         run: |
           echo "🔍 Verificando que la aplicación esté disponible en Render..."
           
-          # Reemplaza con tu URL de Render
           RENDER_URL="https://serviciudadcali.onrender.com"
           
-          MAX_RETRIES=10
+          MAX_RETRIES=15
           for i in $(seq 1 $MAX_RETRIES); do
-            if curl -f "${RENDER_URL}/actuator/health" 2>/dev/null; then
+            echo "⏳ Intento $i/$MAX_RETRIES..."
+            
+            if curl -f -v "${RENDER_URL}/actuator/health" 2>&1 | tee /tmp/curl-render.log; then
+              echo ""
               echo "✅ Aplicación disponible en Render"
-              curl "${RENDER_URL}/actuator/health"
+              curl "${RENDER_URL}/actuator/health" | jq '.' || cat
               exit 0
             fi
             
-            echo "⏳ Intento $i/$MAX_RETRIES - Reintentando en 10s..."
-            sleep 10
+            # Mostrar qué falló
+            if grep -q "Could not resolve host" /tmp/curl-render.log; then
+              echo "❌ ERROR DNS: No se pudo resolver el hostname"
+              echo "ℹ️  Verifica que el dominio de Render sea correcto"
+              break
+            elif grep -q "Connection refused" /tmp/curl-render.log; then
+              echo "⚠️  Conexión rechazada - Aplicación puede estar iniciando"
+            elif grep -q "Connection timed out" /tmp/curl-render.log; then
+              echo "⚠️  Timeout - Render puede estar desplegando"
+            fi
+            
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "⏳ Reintentando en 15s..."
+              sleep 15
+            fi
           done
           
-          echo "⚠️  No se pudo verificar el deploy (puede tardar más)"
-          echo "ℹ️  Revisa manualmente: $RENDER_URL"
+          echo ""
+          echo "⚠️  No se pudo verificar el deploy automáticamente"
+          echo "ℹ️  Esto es normal - Render puede tardar más en plan gratuito"
+          echo "🔗 Verifica manualmente: $RENDER_URL/actuator/health"
 
       - name: 🎉 Deploy completado
         run: |
           echo "=========================================="
-          echo "🎉 DEPLOY COMPLETADO EXITOSAMENTE"
+          echo "🎉 PIPELINE COMPLETADO"
           echo "=========================================="
           echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
-          echo "🔗 URL: https://serviciudadcali.onrender.com"
+          echo "🔗 Commit: ${{ github.sha }}"
+          echo "🌐 URL: https://serviciudadcali.onrender.com"
           echo ""
-          echo "✅ Pipeline Canary completado:"
+          echo "✅ Pipeline ejecutado:"
           echo "  1. ✅ Tests y cobertura validados"
           echo "  2. ✅ Canary validado localmente"
-          echo "  3. ✅ Desplegado a producción (Render)"
+          echo "  3. ✅ Webhook a Render enviado"
+          echo ""
+          echo "⏰ Render tardará 5-10 minutos en desplegar"
+          echo "🔍 Verifica en: https://dashboard.render.com"
