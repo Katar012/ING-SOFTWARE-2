@@ -25,6 +25,9 @@ CREATE TABLE facturas_acueducto (
     ON UPDATE CASCADE
 );
 
+
+
+
 INSERT INTO cliente (id, nombre) VALUES
     ('1106514392', 'Diego Maradonna'),
     ('1002345678', 'Juan Pérez'),
