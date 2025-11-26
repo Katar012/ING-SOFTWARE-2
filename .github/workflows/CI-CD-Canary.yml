@@ -1,0 +1,670 @@
+name: CI/CD Pipeline con Despliegue Canary
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+
+# Permisos necesarios para GHCR
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: joseligos/ingsoft2/serviciudadcali
+  COVERAGE_THRESHOLD: 80
+
+jobs:
+  # ==============================================================
+  # JOB 1: Build, Test y Verificación de Cobertura
+  # ==============================================================
+  build-and-test:
+    name: Build, Tests y Cobertura
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      coverage: ${{ steps.coverage.outputs.percentage }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: 🔢 Generar versión
+        id: version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Versión generada: $VERSION"
+
+      - name: 🏗️ Compilar proyecto
+        run: |
+          cd ServiCiudadCali
+          mvn -B clean compile -DskipTests
+          echo "✅ Compilación exitosa"
+
+      - name: 🧪 Ejecutar pruebas unitarias con cobertura
+        run: |
+          cd ServiCiudadCali
+          mvn -B test jacoco:report
+          echo "✅ Tests ejecutados: $?"
+
+      - name: 📊 Verificar umbral de cobertura (≥80%)
+        id: coverage
+        run: |
+          cd ServiCiudadCali
+          
+          # Extraer porcentaje de cobertura del reporte (ya generado por mvn test)
+          COVERAGE=$(grep -oP 'Total.*?<td class="ctr2">\K[0-9]+' target/site/jacoco/index.html | head -1)
+          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "📊 Cobertura de código: $COVERAGE%"
+          
+          # Verificar umbral con mvn verify (incluye jacoco:check)
+          if ! mvn verify -DskipTests; then
+            echo "❌ ERROR: Verificación de cobertura falló"
+            exit 1
+          fi
+          
+          if [ "$COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
+            echo "❌ ERROR: Cobertura $COVERAGE% es menor que el umbral $COVERAGE_THRESHOLD%"
+            exit 1
+          fi
+          echo "✅ Cobertura cumple con el umbral requerido"
+
+      - name: 📦 Empaquetar aplicación
+        run: |
+          cd ServiCiudadCali
+          mvn -B package -DskipTests
+          echo "✅ Aplicación empaquetada"
+
+      - name: 📤 Subir artefacto JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: serviciudadcali-${{ steps.version.outputs.version }}
+          path: ServiCiudadCali/target/*.jar
+          retention-days: 5
+
+      - name: 📤 Subir reporte de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ServiCiudadCali/target/site/jacoco/
+          retention-days: 30
+
+      - name: 📋 Publicar reporte de cobertura en PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coverage = '${{ steps.coverage.outputs.percentage }}';
+            const threshold = '${{ env.COVERAGE_THRESHOLD }}';
+            const status = coverage >= threshold ? '✅' : '❌';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Reporte de Cobertura de Código\n\n` +
+                    `${status} **Cobertura:** ${coverage}%\n` +
+                    `🎯 **Umbral requerido:** ${threshold}%\n\n` +
+                    `${coverage >= threshold ? '✅ Cobertura cumple con los requisitos' : '❌ Cobertura por debajo del umbral'}`
+            });
+
+  # ==============================================================
+  # JOB 2: Build de Imagen Docker
+  # ==============================================================
+  build-docker-image:
+    name: Build Docker Image
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 📥 Descargar artefacto JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: serviciudadcali-${{ needs.build-and-test.outputs.version }}
+          path: ServiCiudadCali/target/
+
+      - name: 🔐 Login a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏗️ Build imagen Docker NUEVA (Canary)
+        run: |
+          cd ServiCiudadCali
+          VERSION=${{ needs.build-and-test.outputs.version }}
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          VCS_REF=${{ github.sha }}
+          
+          # Build con Docker Compose pasando argumentos de metadata
+          VERSION=$VERSION BUILD_DATE=$BUILD_DATE VCS_REF=$VCS_REF docker compose -f docker-compose.build.yml build
+          
+          # Esta es la NUEVA versión - etiquetar localmente
+          docker tag serviciudadcali:latest serviciudadcali:canary
+          docker tag serviciudadcali:latest serviciudadcali:$VERSION
+          
+          # Etiquetar para GHCR
+          docker tag serviciudadcali:latest ${IMAGE_BASE}:canary
+          docker tag serviciudadcali:latest ${IMAGE_BASE}:${VERSION}
+          
+          echo "✅ Imagen NUEVA creada: serviciudadcali:canary (versión $VERSION)"
+
+      - name: 📤 Subir imagen Canary a GHCR
+        run: |
+          VERSION=${{ needs.build-and-test.outputs.version }}
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          
+          # Subir la nueva versión como 'canary' y con su versión específica
+          docker push ${IMAGE_BASE}:canary
+          docker push ${IMAGE_BASE}:${VERSION}
+          
+          echo "✅ Imagen Canary subida a GHCR:"
+          echo "   - ${IMAGE_BASE}:canary"
+          echo "   - ${IMAGE_BASE}:${VERSION}"
+
+      - name: 💾 Guardar imagen Canary localmente (para artefacto)
+        run: |
+          docker save serviciudadcali:canary | gzip > serviciudadcali-canary.tar.gz
+          echo "✅ Imagen Canary guardada localmente"
+
+      - name: 📤 Subir imagen Canary como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-canary
+          path: serviciudadcali-canary.tar.gz
+          retention-days: 7
+
+  # ==============================================================
+  # JOB 3: Despliegue Canary
+  # ==============================================================
+  canary-deploy:
+    name: Despliegue Canary
+    needs: [build-and-test, build-docker-image]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📥 Descargar imagen Canary (nueva)
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-canary
+          path: .
+
+      - name: 📦 Cargar imagen Canary (nueva)
+        run: |
+          docker load < serviciudadcali-canary.tar.gz
+          echo "✅ Imagen Canary (NUEVA versión) cargada"
+
+      - name: 📥 Verificar y descargar imagen Stable anterior de GHCR
+        run: |
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          
+          # Intentar descargar la imagen stable del registry
+          if docker pull ${IMAGE_BASE}:stable 2>/dev/null; then
+            echo "✅ Imagen STABLE anterior encontrada en GHCR"
+            # Etiquetar localmente para usar con docker-compose
+            docker tag ${IMAGE_BASE}:stable serviciudadcali:stable
+            
+            # Obtener la versión del stable
+            STABLE_VERSION=$(docker inspect ${IMAGE_BASE}:stable --format='{{range .Config.Labels}}{{println .}}{{end}}' | grep -oP 'version=\K[^"]+' || echo "unknown")
+            echo "📦 Versión STABLE descargada: ${STABLE_VERSION}"
+            echo "STABLE_EXISTS=true" >> $GITHUB_ENV
+            echo "STABLE_VERSION=${STABLE_VERSION}" >> $GITHUB_ENV
+          else
+            echo "ℹ️  No hay imagen STABLE anterior en GHCR (primer despliegue)"
+            echo "STABLE_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🐳 Configurar y levantar servicios con Docker Compose
+        run: |
+          cd ServiCiudadCali
+          VERSION=${{ needs.build-and-test.outputs.version }}
+          
+          # Detener contenedores previos si existen
+          docker compose --profile canary stop app-canary 2>/dev/null || true
+          docker compose --profile canary rm -f app-canary 2>/dev/null || true
+          docker compose stop app-stable 2>/dev/null || true
+          docker compose rm -f app-stable 2>/dev/null || true
+          
+          # Levantar MySQL si no está corriendo
+          docker compose up -d mysql
+          
+          # Esperar que MySQL esté listo
+          sleep 10
+          
+          # Verificar si hay versión stable en GHCR (no en docker ps)
+          if [ "$STABLE_EXISTS" = "false" ]; then
+            echo "=========================================="
+            echo "⚠️  PRIMER DESPLIEGUE - No hay versión stable en GHCR"
+            echo "=========================================="
+            
+            # En el PRIMER despliegue, la imagen canary se convierte en stable
+            docker tag serviciudadcali:canary serviciudadcali:stable
+            
+            # Desplegar como stable (será la versión base para futuros canary)
+            VERSION=${VERSION} docker compose up -d app-stable
+            echo "✅ Primera versión desplegada como STABLE en puerto 8080"
+            sleep 20
+            
+            echo ""
+            echo "ℹ️  Nota: Este es el primer despliegue, no hay Canary aún"
+            echo "ℹ️  En el próximo push, esta versión será 'stable' (vieja)"
+            echo "ℹ️  y la nueva será 'canary' para comparación"
+          else
+            echo "=========================================="
+            echo "✅ DESPLIEGUE CANARY - Stable existe en GHCR"
+            echo "=========================================="
+            
+            echo "📦 Versión STABLE actual (vieja del push anterior): $STABLE_VERSION"
+            echo "📦 Versión CANARY nueva (del push actual): $VERSION"
+            echo ""
+            
+            # Desplegar AMBAS versiones:
+            # 1. STABLE (versión VIEJA del push anterior)
+            STABLE_VERSION_NUM=$(echo "$STABLE_VERSION" | grep -oP '[0-9.]+' || echo "1.0.0")
+            VERSION=$STABLE_VERSION_NUM docker compose up -d app-stable
+            
+            # 2. CANARY (versión NUEVA del push actual)
+            VERSION=$VERSION docker compose --profile canary up -d app-canary
+            
+            echo "✅ Despliegue Canary completado:"
+            echo "🔗 Puerto 8080: STABLE v${STABLE_VERSION} (versión VIEJA - push anterior)"
+            echo "🔗 Puerto 8081: CANARY v${VERSION} (versión NUEVA - push actual)"
+          fi
+          
+          # Mostrar estado de contenedores
+          echo ""
+          echo "📊 Estado de contenedores:"
+          docker compose ps
+          docker compose --profile canary ps
+
+      - name: ⏳ Esperar inicialización
+        run: |
+          cd ServiCiudadCali
+          
+          # Verificar qué se desplegó
+          if docker ps | grep -q "serviciudadcali-canary"; then
+            echo "⏳ Esperando a que la aplicación CANARY inicie..."
+            echo "⏳ Esperando 45 segundos para que Spring Boot arranque completamente..."
+            sleep 45
+            
+            echo ""
+            echo "📝 Últimas líneas de logs de Canary:"
+            docker logs --tail 30 serviciudadcali-canary || true
+          elif docker ps | grep -q "serviciudadcali-stable"; then
+            echo "⏳ Esperando a que la aplicación STABLE (primer despliegue) inicie..."
+            echo "⏳ Esperando 45 segundos para que Spring Boot arranque completamente..."
+            sleep 45
+            
+            echo ""
+            echo "📝 Últimas líneas de logs de Stable:"
+            docker logs --tail 30 serviciudadcali-stable || true
+          fi
+
+      - name: 🔍 Health Check
+        run: |
+          cd ServiCiudadCali
+          
+          # Determinar qué servicio verificar
+          if docker ps | grep -q "serviciudadcali-canary"; then
+            echo "🔍 Verificando health de versión CANARY..."
+            SERVICE="canary"
+            CONTAINER="serviciudadcali-canary"
+            PORT="8081"
+          elif docker ps | grep -q "serviciudadcali-stable"; then
+            echo "🔍 Verificando health de versión STABLE (primer despliegue)..."
+            SERVICE="stable"
+            CONTAINER="serviciudadcali-stable"
+            PORT="8080"
+          else
+            echo "❌ ERROR: No hay ningún servicio corriendo"
+            docker compose ps
+            exit 1
+          fi
+          
+          echo "🎯 Verificando: $SERVICE en puerto $PORT"
+          
+          # Verificar que el contenedor está corriendo
+          if ! docker ps | grep -q "$CONTAINER"; then
+            echo "❌ ERROR: Contenedor $CONTAINER no está corriendo"
+            echo "📝 Logs del contenedor:"
+            docker logs $CONTAINER || true
+            exit 1
+          fi
+          
+          # Verificar conectividad
+          echo "🔍 Verificando que el puerto $PORT está accesible..."
+          
+          MAX_RETRIES=15
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            echo "⏳ Intento $RETRY_COUNT/$MAX_RETRIES..."
+            
+            if curl -f http://localhost:${PORT}/actuator/health 2>&1 | grep -q "UP"; then
+              echo "✅ Health check exitoso!"
+              curl http://localhost:${PORT}/actuator/health
+              exit 0
+            fi
+            
+            if [ $RETRY_COUNT -eq 5 ] || [ $RETRY_COUNT -eq 10 ]; then
+              echo "📝 Logs recientes (intento $RETRY_COUNT):"
+              docker logs --tail 20 $CONTAINER || true
+            fi
+            
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              sleep 5
+            fi
+          done
+          
+          echo "❌ Health check falló después de $MAX_RETRIES intentos"
+          echo ""
+          echo "📝 Logs completos del contenedor $CONTAINER:"
+          docker logs $CONTAINER || true
+          echo ""
+          echo "📊 Estado de todos los contenedores:"
+          docker compose ps
+          docker compose --profile canary ps
+          exit 1
+
+      - name: 🧪 Smoke Tests
+        run: |
+          cd ServiCiudadCali
+          
+          # Determinar qué servicio probar
+          if docker ps | grep -q "serviciudadcali-canary"; then
+            echo "🧪 Ejecutando smoke tests en versión CANARY..."
+            PORT="8081"
+            SERVICE="Canary"
+          elif docker ps | grep -q "serviciudadcali-stable"; then
+            echo "🧪 Ejecutando smoke tests en versión STABLE (primer despliegue)..."
+            PORT="8080"
+            SERVICE="Stable"
+          else
+            echo "❌ No hay servicio para probar"
+            exit 1
+          fi
+          
+          echo "🎯 Probando $SERVICE en puerto $PORT"
+          
+          # Test 1: Endpoint principal
+          echo "📍 Test 1: GET /"
+          if curl -f http://localhost:${PORT}/ 2>&1; then
+            echo "✅ Test 1 pasó"
+          else
+            echo "⚠️  Test 1 falló (puede ser esperado si no hay endpoint raíz)"
+          fi
+          
+          # Test 2: Health check
+          echo "📍 Test 2: GET /actuator/health"
+          curl -f http://localhost:${PORT}/actuator/health || exit 1
+          echo "✅ Test 2 pasó"
+          
+          echo ""
+          echo "✅ Smoke tests completados exitosamente"
+
+      - name: 📊 Métricas
+        run: |
+          cd ServiCiudadCali
+          
+          # Determinar qué servicio mostrar
+          if docker ps | grep -q "serviciudadcali-canary"; then
+            echo "📊 Métricas de versión CANARY..."
+            CONTAINER="serviciudadcali-canary"
+            PORT="8081"
+            SERVICE="Canary"
+          elif docker ps | grep -q "serviciudadcali-stable"; then
+            echo "📊 Métricas de versión STABLE (primer despliegue)..."
+            CONTAINER="serviciudadcali-stable"
+            PORT="8080"
+            SERVICE="Stable"
+          else
+            echo "⚠️  No hay contenedor activo"
+            exit 0
+          fi
+          
+          echo "📊 Recolectando métricas de $SERVICE..."
+          echo "🔗 URL: http://localhost:${PORT}"
+          echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
+          echo "📊 Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
+          
+          # Obtener información del contenedor
+          docker ps -f name=${CONTAINER} --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          
+          # Logs recientes
+          echo ""
+          echo "📝 Últimas 20 líneas de logs:"
+          docker logs --tail 20 ${CONTAINER}
+
+      - name: ⏸️ Resumen
+        run: |
+          cd ServiCiudadCali
+          
+          if docker ps | grep -q "serviciudadcali-canary"; then
+            echo "✅ Versión Canary desplegada exitosamente"
+            echo "🎯 La versión Canary está lista para recibir tráfico de prueba"
+            echo ""
+            echo "📋 Información:"
+            echo "  🔗 URL Stable (vieja): http://localhost:8080"
+            echo "  🔗 URL Canary (nueva): http://localhost:8081"
+            echo "  📦 Versión Canary: ${{ needs.build-and-test.outputs.version }}"
+            echo ""
+            echo "📋 Próximos pasos:"
+            echo "  1. Monitorear métricas y logs"
+            echo "  2. Si todo va bien → Job promote-to-production"
+            echo "  3. Si hay problemas → Job rollback"
+          else
+            echo "✅ Primera versión desplegada como STABLE"
+            echo "ℹ️  Este fue el primer despliegue - no hay Canary aún"
+            echo ""
+            echo "📋 Información:"
+            echo "  🔗 URL Stable: http://localhost:8080"
+            echo "  📦 Versión: ${{ needs.build-and-test.outputs.version }}"
+            echo ""
+            echo "ℹ️  En el próximo push:"
+            echo "  - Esta versión será 'stable' (vieja) en puerto 8080"
+            echo "  - La nueva versión será 'canary' (nueva) en puerto 8081"
+          fi
+
+  # ==============================================================
+  # JOB 4: Promoción a Producción (Manual)
+  # ==============================================================
+  promote-to-production:
+    name: Promover Canary a Producción
+    needs: [build-and-test, canary-deploy]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Nota: Requiere aprobación manual en GitHub Actions
+    # Para activar, configurar environment 'production' en Settings > Environments
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📥 Descargar imagen Canary (nueva)
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-canary
+          path: .
+
+      - name: 📦 Cargar imagen Canary
+        run: |
+          docker load < serviciudadcali-canary.tar.gz
+          echo "✅ Imagen Canary (nueva versión) cargada"
+
+      - name: 🔄 Backup versión Stable actual (la vieja) en GHCR
+        run: |
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          
+          # Descargar stable actual de GHCR (si existe)
+          if docker pull ${IMAGE_BASE}:stable 2>/dev/null; then
+            # Hacer backup etiquetándola como rollback
+            docker tag ${IMAGE_BASE}:stable ${IMAGE_BASE}:rollback
+            docker push ${IMAGE_BASE}:rollback
+            
+            STABLE_VERSION=$(docker inspect ${IMAGE_BASE}:stable --format='{{range .Config.Labels}}{{println .}}{{end}}' | grep -oP 'version=\K[^"]+' || echo "unknown")
+            echo "✅ Backup de versión stable (v${STABLE_VERSION}) guardado en GHCR como :rollback"
+          else
+            echo "ℹ️  No hay versión stable previa para hacer backup (primer despliegue)"
+          fi
+
+      - name: 🚀 Promover Canary a Producción y actualizar GHCR
+        run: |
+          cd ServiCiudadCali
+          VERSION=${{ needs.build-and-test.outputs.version }}
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          
+          # Detener contenedores locales
+          docker compose stop app-stable 2>/dev/null || true
+          docker compose rm -f app-stable 2>/dev/null || true
+          docker compose --profile canary stop app-canary 2>/dev/null || true
+          docker compose --profile canary rm -f app-canary 2>/dev/null || true
+          
+          # Promover: la imagen canary (nueva) se convierte en stable
+          docker tag serviciudadcali:canary serviciudadcali:stable
+          
+          # IMPORTANTE: Subir la nueva stable a GHCR
+          docker tag serviciudadcali:canary ${IMAGE_BASE}:stable
+          docker push ${IMAGE_BASE}:stable
+          
+          echo "🔄 Promoción: Canary (v${VERSION}) → Stable"
+          echo "✅ Nueva versión STABLE subida a GHCR: ${IMAGE_BASE}:stable"
+          
+          # Desplegar NUEVA versión como stable en producción
+          VERSION=$VERSION docker compose up -d app-stable
+          
+          echo "✅ Nueva versión promovida a STABLE en puerto 8080"
+          echo "🔗 URL Producción: http://localhost:8080"
+
+      - name: ⏳ Esperar inicialización
+        run: sleep 30
+
+      - name: 🔍 Health Check Producción
+        run: |
+          echo "🔍 Verificando health de versión en producción..."
+          
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
+              echo "✅ Producción está saludable!"
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⏳ Intento $RETRY_COUNT/$MAX_RETRIES - Reintentando en 5 segundos..."
+            sleep 5
+          done
+          
+          echo "❌ Health check de producción falló"
+          echo "🔄 Iniciando rollback automático..."
+          exit 1
+
+      - name: 🧹 Limpiar Canary
+        if: success()
+        run: |
+          cd ServiCiudadCali
+          docker compose --profile canary stop app-canary 2>/dev/null || true
+          docker compose --profile canary rm -f app-canary 2>/dev/null || true
+          echo "✅ Versión Canary removida"
+
+      - name: 🎉 Despliegue completado
+        if: success()
+        run: |
+          echo "🎉 ¡Despliegue a producción completado exitosamente!"
+          echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
+          echo "📊 Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
+          echo "🔗 URL: http://localhost:8080"
+
+  # ==============================================================
+  # JOB 5: Rollback Automático (en caso de fallo)
+  # ==============================================================
+  rollback:
+    name: Rollback Automático
+    needs: [promote-to-production]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔄 Ejecutar Rollback con Docker Compose
+        run: |
+          cd ServiCiudadCali
+          IMAGE_BASE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          
+          echo "🔄 Iniciando rollback a versión anterior..."
+          
+          # Descargar imagen de rollback desde GHCR
+          if docker pull ${IMAGE_BASE}:rollback 2>/dev/null; then
+            echo "✅ Imagen de rollback descargada de GHCR"
+            
+            # Detener versión fallida
+            docker compose stop app-stable 2>/dev/null || true
+            docker compose rm -f app-stable 2>/dev/null || true
+            
+            # Restaurar imagen de rollback como stable (local y en GHCR)
+            docker tag ${IMAGE_BASE}:rollback serviciudadcali:stable
+            docker tag ${IMAGE_BASE}:rollback ${IMAGE_BASE}:stable
+            docker push ${IMAGE_BASE}:stable
+            
+            # Desplegar versión anterior con Docker Compose
+            docker compose up -d app-stable
+            
+            echo "✅ Rollback completado - Versión anterior restaurada como STABLE"
+            echo "✅ Imagen stable actualizada en GHCR"
+          else
+            echo "❌ ERROR: No se encontró imagen de rollback en GHCR"
+            echo "⚠️  No se puede hacer rollback automático"
+            exit 1
+          fi
+
+      - name: 📧 Notificar fallo
+        run: |
+          echo "❌ ALERTA: Despliegue falló - Rollback ejecutado"
+          echo "📋 Revisar logs para más detalles"
