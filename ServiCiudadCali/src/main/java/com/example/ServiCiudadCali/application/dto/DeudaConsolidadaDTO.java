@@ -40,6 +40,4 @@ public class DeudaConsolidadaDTO {
         private final BigDecimal valorPagar;
 
     }
-
-
 }
