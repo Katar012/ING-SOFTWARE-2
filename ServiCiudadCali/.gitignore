@@ -45,12 +45,21 @@ spring.log
 
 # ==========================================
 # Configuración sensible o de entorno
+# (solo ignorar en src/main/resources)
 # ==========================================
 .env
 *.env
-application-*.yml
-application-*.yaml
-application-*.properties
+
+# Ignorar SOLO en producción (main/resources)
+/src/main/resources/application-*.yml
+/src/main/resources/application-*.yaml
+/src/main/resources/application-*.properties
+
+# PERMITIR explícitamente archivos de test
+!src/test/resources/application*.yml
+!src/test/resources/application*.yaml
+!src/test/resources/application*.properties
+!src/test/resources/**
 
 # ==========================================
 # Archivos del sistema operativo
