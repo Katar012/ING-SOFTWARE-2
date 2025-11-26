@@ -8,7 +8,7 @@ on:
 
 env:
   COVERAGE_THRESHOLD: 80
-  STABLE_IMAGE_NAME: serviciudadcali-stable-persistent
+  STABLE_IMAGE_NAME: serviciudadcali-stable
 
 jobs:
   # ==============================================================
@@ -76,7 +76,6 @@ jobs:
         run: |
           cd ServiCiudadCali
           
-          # Verificar con mvn verify (incluye jacoco:check)
           if ! mvn verify; then
             echo "❌ ERROR: Cobertura menor al 80%"
             exit 1
@@ -118,7 +117,6 @@ jobs:
     name: 🕯️ Validación Canary
     needs: build-and-test
     runs-on: ubuntu-latest
-    # CAMBIO AQUÍ: Usar rama Vila en lugar de main
     if: github.event_name == 'push' && github.ref == 'refs/heads/Vila'
     
     services:
@@ -145,43 +143,100 @@ jobs:
           path: ServiCiudadCali/target/
 
       # ============================================================
-      # CLAVE: Descargar versión STABLE anterior (si existe)
+      # DESCARGAR STABLE ANTERIOR
       # ============================================================
-      - name: 📥 Intentar descargar imagen STABLE anterior
+      - name: 📥 Descargar artefacto STABLE del workflow anterior
         id: download-stable
-        uses: actions/download-artifact@v4
         continue-on-error: true
-        with:
-          name: ${{ env.STABLE_IMAGE_NAME }}
-          path: ./stable-image/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Buscando último artefacto STABLE..."
+          echo "📦 Nombre: ${{ env.STABLE_IMAGE_NAME }}"
+          echo ""
+          
+          # Buscar artefactos (excluyendo el workflow actual)
+          ARTIFACT_JSON=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/artifacts?name=${{ env.STABLE_IMAGE_NAME }}&per_page=10" 2>&1)
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Error consultando API de GitHub"
+            echo "$ARTIFACT_JSON"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Filtrar artefactos del workflow actual y obtener el más reciente
+          ARTIFACT_ID=$(echo "$ARTIFACT_JSON" | jq -r --arg RUN_ID "${{ github.run_id }}" \
+            '.artifacts[] | select(.workflow_run.id != ($RUN_ID | tonumber)) | .id' | head -n1)
+          
+          if [ -z "$ARTIFACT_ID" ] || [ "$ARTIFACT_ID" == "null" ]; then
+            echo "ℹ️  No hay artefacto STABLE de workflows anteriores"
+            echo "ℹ️  Este será el primer despliegue"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Obtener información del artefacto
+          ARTIFACT_SIZE=$(echo "$ARTIFACT_JSON" | jq -r --arg ID "$ARTIFACT_ID" \
+            '.artifacts[] | select(.id == ($ID | tonumber)) | .size_in_bytes')
+          ARTIFACT_RUN=$(echo "$ARTIFACT_JSON" | jq -r --arg ID "$ARTIFACT_ID" \
+            '.artifacts[] | select(.id == ($ID | tonumber)) | .workflow_run.id')
+          ARTIFACT_CREATED=$(echo "$ARTIFACT_JSON" | jq -r --arg ID "$ARTIFACT_ID" \
+            '.artifacts[] | select(.id == ($ID | tonumber)) | .created_at')
+          
+          echo "✅ Artefacto encontrado"
+          echo "  - ID: $ARTIFACT_ID"
+          echo "  - Tamaño: $(awk "BEGIN {printf \"%.1f MB\", $ARTIFACT_SIZE/1048576}")"
+          echo "  - Workflow Run: $ARTIFACT_RUN"
+          echo "  - Creado: $ARTIFACT_CREATED"
+          echo ""
+          
+          # Descargar artefacto
+          echo "📥 Descargando artefacto..."
+          mkdir -p ./stable-image/
+          
+          if ! gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip" \
+            > ./stable-image/artifact.zip; then
+            echo "❌ Error descargando artefacto"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Descomprimir
+          echo "📦 Descomprimiendo..."
+          cd ./stable-image/
+          unzip -q artifact.zip
+          rm artifact.zip
+          cd ..
+          
+          # Verificar contenido
+          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
+            FILE_SIZE=$(du -h ./stable-image/serviciudadcali-stable.tar.gz | cut -f1)
+            echo ""
+            echo "✅ Artefacto descargado exitosamente"
+            echo "📦 Archivo: serviciudadcali-stable.tar.gz"
+            echo "📏 Tamaño descomprimido: $FILE_SIZE"
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Archivo tar.gz no encontrado en el artefacto"
+            echo "📂 Contenido del artefacto:"
+            ls -la ./stable-image/
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: 🔍 Verificar si hay versión STABLE previa
         id: check-stable
         run: |
-          echo "🔍 Verificando descarga del artefacto..."
-          echo ""
-          echo "📊 Información del step de descarga:"
-          echo "  - Outcome: ${{ steps.download-stable.outcome }}"
-          echo "  - Conclusion: ${{ steps.download-stable.conclusion }}"
-          echo ""
-          
-          echo "📂 Contenido del directorio ./stable-image/:"
-          ls -lah ./stable-image/ 2>/dev/null || echo "❌ Directorio vacío o no existe"
-          echo ""
-          
-          # Verificar si el archivo tar.gz existe
-          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
-            FILE_SIZE=$(du -h ./stable-image/serviciudadcali-stable.tar.gz | cut -f1)
-            echo "✅ Artefacto STABLE encontrado"
-            echo "📦 Tamaño: $FILE_SIZE"
+          if [ "${{ steps.download-stable.outputs.found }}" == "true" ]; then
             echo "has_stable=true" >> $GITHUB_OUTPUT
+            echo "✅ Se encontró versión STABLE anterior"
           else
-            echo "ℹ️  No hay versión STABLE anterior (primer despliegue)"
-            echo ""
-            echo "🔍 Debug: Información de commits"
-            echo "  - Commit anterior: ${{ github.event.before }}"
-            echo "  - Commit actual: ${{ github.sha }}"
             echo "has_stable=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  No hay versión STABLE anterior (primer despliegue)"
           fi
 
       # ============================================================
@@ -190,24 +245,30 @@ jobs:
       - name: 🔄 Restaurar imagen STABLE anterior
         if: steps.check-stable.outputs.has_stable == 'true'
         run: |
-          cd stable-image
-          docker load < serviciudadcali-stable.tar.gz
+          echo "🔄 Cargando imagen STABLE anterior..."
+          docker load < ./stable-image/serviciudadcali-stable.tar.gz
           echo "✅ Imagen STABLE anterior restaurada"
+          echo ""
+          echo "📊 Imágenes disponibles:"
           docker images | grep serviciudadcali
 
       - name: 🐳 Build imagen CANARY (nueva versión)
         run: |
+          echo "🐳 Construyendo imagen CANARY con código nuevo..."
           cd ServiCiudadCali
           
-          # Renombrar JAR para que coincida con Dockerfile
-          mv target/serviciudadcali-*.jar target/ServiCiudadCali-0.0.1-SNAPSHOT.jar || true
+          # Renombrar JAR para Dockerfile
+          mv target/serviciudadcali-*.jar target/ServiCiudadCali-0.0.1-SNAPSHOT.jar 2>/dev/null || true
           
-          # Build desde raíz (como en tu CI actual)
+          # Build desde raíz
           cd ..
           docker build -t serviciudadcali:canary \
             -f ServiCiudadCali/Dockerfile .
           
-          echo "✅ Imagen CANARY construida con código nuevo"
+          echo "✅ Imagen CANARY construida"
+          echo ""
+          echo "📊 Imagen CANARY:"
+          docker images | grep canary
 
       - name: 🚀 Levantar STABLE y CANARY en paralelo
         if: steps.check-stable.outputs.has_stable == 'true'
@@ -215,11 +276,14 @@ jobs:
           echo "=========================================="
           echo "✅ DESPLIEGUE CANARY CON DOS VERSIONES"
           echo "=========================================="
+          echo ""
           
           # Esperar a que MySQL esté listo
+          echo "⏳ Esperando MySQL..."
           sleep 10
           
           # Levantar STABLE (versión ANTERIOR) en puerto 8080
+          echo "🚀 Desplegando STABLE en puerto 8080..."
           docker run -d \
             --name serviciudadcali-stable \
             --network host \
@@ -231,10 +295,12 @@ jobs:
           
           echo "✅ STABLE desplegado en puerto 8080 (versión ANTERIOR)"
           
-          # Esperar inicialización de stable
+          # Esperar que STABLE inicie
+          echo "⏳ Esperando que STABLE inicie (20s)..."
           sleep 20
           
           # Levantar CANARY (versión NUEVA) en puerto 8081
+          echo "🚀 Desplegando CANARY en puerto 8081..."
           docker run -d \
             --name serviciudadcali-canary \
             --network host \
@@ -245,12 +311,12 @@ jobs:
             serviciudadcali:canary
           
           echo "✅ CANARY desplegado en puerto 8081 (versión NUEVA)"
-          
-          # Mostrar estado
+          echo ""
+          echo "📊 Estado de contenedores:"
           docker ps
           echo ""
-          echo "🔗 Puerto 8080: STABLE (versión anterior)"
-          echo "🔗 Puerto 8081: CANARY (versión nueva - commit actual)"
+          echo "🔗 Puerto 8080: STABLE (versión anterior - workflow previo)"
+          echo "🔗 Puerto 8081: CANARY (versión nueva - commit ${{ github.sha }})"
 
       # ============================================================
       # CASO 2: NO HAY STABLE ANTERIOR → Primer Despliegue
@@ -261,8 +327,9 @@ jobs:
           echo "=========================================="
           echo "ℹ️  PRIMER DESPLIEGUE - NO HAY CANARY"
           echo "=========================================="
+          echo ""
           
-          # Verificar que MySQL esté listo
+          # Verificar MySQL
           echo "🔍 Verificando MySQL..."
           for i in {1..30}; do
             if docker ps | grep mysql:8.0 > /dev/null && \
@@ -274,21 +341,11 @@ jobs:
             sleep 2
           done
           
-          # La imagen nueva se convierte en STABLE
+          # Tagear imagen como stable
           docker tag serviciudadcali:canary serviciudadcali:stable
           
-          # Obtener el ID del contenedor MySQL
-          MYSQL_CONTAINER=$(docker ps -q -f ancestor=mysql:8.0)
-          
-          if [ -z "$MYSQL_CONTAINER" ]; then
-            echo "❌ ERROR: No se encontró contenedor MySQL"
-            docker ps -a
-            exit 1
-          fi
-          
-          echo "✅ MySQL container ID: $MYSQL_CONTAINER"
-          
-          # Desplegar usando --network host (más simple y confiable)
+          # Desplegar
+          echo "🚀 Desplegando primera versión como STABLE..."
           docker run -d \
             --name serviciudadcali-stable \
             --network host \
@@ -299,102 +356,76 @@ jobs:
             serviciudadcali:stable
           
           echo "✅ Primera versión desplegada como STABLE en puerto 8080"
-          echo "ℹ️  En el próximo push, esta será la versión 'vieja'"
-          
-          # Mostrar estado
+          echo "ℹ️  En el próximo push, esta será la versión 'vieja' y habrá Canary"
+          echo ""
+          echo "📊 Contenedores:"
           docker ps
           
-          # Esperar a que Spring Boot inicie
-          echo "⏳ Esperando 60 segundos para que Spring Boot inicie completamente..."
+          # Esperar inicialización
+          echo ""
+          echo "⏳ Esperando 60s para que Spring Boot inicie..."
           sleep 60
           
-          # Mostrar logs iniciales
           echo ""
-          echo "📝 Primeros logs de STABLE:"
+          echo "📝 Primeros logs:"
           docker logs --tail 50 serviciudadcali-stable
 
       # ============================================================
-      # Esperar inicialización (REDUCIR TIEMPO - ya esperamos 45s arriba)
+      # Health Checks
       # ============================================================
-      - name: ⏳ Esperar inicialización de servicios
+      - name: ⏳ Esperar inicialización adicional
         run: |
           echo "⏳ Esperando 15 segundos adicionales..."
           sleep 15
 
-      # ============================================================
-      # Health Checks (MEJORADO con más información de debug)
-      # ============================================================
       - name: 🔍 Health Check - STABLE
         if: always()
         run: |
           echo "🔍 Verificando STABLE en puerto 8080..."
+          echo ""
           
-          # Verificar que el contenedor esté corriendo
+          # Verificar contenedor
           if ! docker ps | grep serviciudadcali-stable; then
             echo "❌ ERROR: Contenedor STABLE no está corriendo"
-            docker ps -a | grep serviciudadcali-stable
+            docker ps -a | grep serviciudadcali-stable || true
             echo ""
-            echo "📝 Logs del contenedor:"
-            docker logs serviciudadcali-stable
+            docker logs serviciudadcali-stable || true
             exit 1
           fi
           
-          echo "✅ Contenedor STABLE está corriendo"
+          echo "✅ Contenedor STABLE corriendo"
+          echo ""
           
-          # Verificar puertos
-          echo "🔍 Verificando puertos expuestos:"
-          docker port serviciudadcali-stable || true
-          netstat -tulpn | grep 8080 || true
-          
-          # Health checks con más tiempo e información
+          # Health checks
           MAX_RETRIES=20
           for i in $(seq 1 $MAX_RETRIES); do
             echo "⏳ Intento $i/$MAX_RETRIES..."
             
-            # Intentar curl con más verbose
-            if curl -v -f http://localhost:8080/actuator/health 2>&1 | tee /tmp/curl-output.txt; then
+            if curl -f http://localhost:8080/actuator/health 2>&1 | tee /tmp/stable-health.log | grep -q "UP"; then
+              echo ""
               echo "✅ STABLE está saludable"
-              curl http://localhost:8080/actuator/health | jq '.' || cat
+              curl http://localhost:8080/actuator/health | jq '.' 2>/dev/null || cat
               break
             fi
             
-            # Mostrar qué falló
-            if grep -q "Connection refused" /tmp/curl-output.txt; then
-              echo "⚠️  Conexión rechazada - Spring Boot puede estar iniciando todavía"
-            elif grep -q "Empty reply" /tmp/curl-output.txt; then
-              echo "⚠️  Respuesta vacía - Servidor respondiendo pero endpoint no listo"
+            if grep -q "Connection refused" /tmp/stable-health.log; then
+              echo "⚠️  Conexión rechazada - Spring Boot iniciando..."
             fi
             
-            # Mostrar logs cada 5 intentos
+            # Logs cada 5 intentos
             if [ $((i % 5)) -eq 0 ]; then
               echo ""
-              echo "📝 Últimos logs (intento $i):"
+              echo "📝 Últimos 20 logs:"
               docker logs --tail 20 serviciudadcali-stable
               echo ""
             fi
             
             if [ $i -eq $MAX_RETRIES ]; then
               echo ""
-              echo "❌ STABLE no respondió después de $MAX_RETRIES intentos (100 segundos)"
+              echo "❌ STABLE no respondió después de $MAX_RETRIES intentos"
               echo ""
-              echo "📊 Diagnóstico completo:"
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              
-              echo "📝 Logs completos del contenedor:"
+              echo "📝 Logs completos:"
               docker logs serviciudadcali-stable
-              
-              echo ""
-              echo "🔍 Estado del contenedor:"
-              docker inspect serviciudadcali-stable
-              
-              echo ""
-              echo "🌐 Información de red:"
-              docker network inspect app-network || true
-              
-              echo ""
-              echo "📊 Procesos en el contenedor:"
-              docker top serviciudadcali-stable || true
-              
               exit 1
             fi
             
@@ -405,88 +436,85 @@ jobs:
         if: steps.check-stable.outputs.has_stable == 'true'
         run: |
           echo "🔍 Verificando CANARY en puerto 8081..."
+          echo ""
           
           MAX_RETRIES=15
           for i in $(seq 1 $MAX_RETRIES); do
-            if curl -f http://localhost:8081/actuator/health 2>/dev/null; then
+            echo "⏳ Intento $i/$MAX_RETRIES..."
+            
+            if curl -f http://localhost:8081/actuator/health 2>&1 | grep -q "UP"; then
+              echo ""
               echo "✅ CANARY está saludable"
-              curl http://localhost:8081/actuator/health
+              curl http://localhost:8081/actuator/health | jq '.' 2>/dev/null || cat
               break
             fi
             
             if [ $i -eq $MAX_RETRIES ]; then
-              echo "❌ CANARY no respondió después de $MAX_RETRIES intentos"
+              echo ""
+              echo "❌ CANARY no respondió"
+              echo ""
               docker logs serviciudadcali-canary
               exit 1
             fi
             
-            echo "⏳ Intento $i/$MAX_RETRIES - Reintentando en 5s..."
+            echo "⚠️  No disponible, reintentando en 5s..."
             sleep 5
           done
 
       # ============================================================
-      # Smoke Tests en CANARY (versión nueva)
+      # Tests y Comparación
       # ============================================================
       - name: 🧪 Smoke Tests en CANARY
         if: steps.check-stable.outputs.has_stable == 'true'
         run: |
-          echo "🧪 Ejecutando smoke tests en CANARY (puerto 8081)..."
+          echo "🧪 Smoke tests en CANARY..."
           
-          # Test 1: Health endpoint
-          echo "📍 Test 1: GET /actuator/health"
+          echo "📍 Test: GET /actuator/health"
           curl -f http://localhost:8081/actuator/health || exit 1
           
-          # Test 2: Endpoint raíz (si existe)
-          echo "📍 Test 2: GET /"
-          curl -f http://localhost:8081/ || echo "⚠️  Endpoint raíz no disponible (ok)"
-          
-          echo "✅ Smoke tests completados exitosamente"
+          echo ""
+          echo "✅ Smoke tests completados"
 
-      # ============================================================
-      # Comparar respuestas STABLE vs CANARY
-      # ============================================================
       - name: 📊 Comparar STABLE vs CANARY
         if: steps.check-stable.outputs.has_stable == 'true'
         run: |
-          echo "📊 Comparando respuestas de STABLE vs CANARY..."
-          
-          echo "STABLE (puerto 8080):"
-          curl -s http://localhost:8080/actuator/health | jq '.' || true
-          
+          echo "📊 Comparando versiones..."
           echo ""
-          echo "CANARY (puerto 8081):"
-          curl -s http://localhost:8081/actuator/health | jq '.' || true
+          echo "STABLE (8080):"
+          curl -s http://localhost:8080/actuator/health | jq '.' 2>/dev/null || curl -s http://localhost:8080/actuator/health
+          echo ""
+          echo "CANARY (8081):"
+          curl -s http://localhost:8081/actuator/health | jq '.' 2>/dev/null || curl -s http://localhost:8081/actuator/health
 
-      # ============================================================
-      # Mostrar logs
-      # ============================================================
-      - name: 📝 Logs de contenedores
+      - name: 📝 Logs finales
         if: always()
         run: |
-          echo "📝 Logs de STABLE:"
-          docker logs --tail 50 serviciudadcali-stable || true
+          echo "📝 Logs STABLE:"
+          docker logs --tail 50 serviciudadcali-stable 2>&1 || true
           
-          echo ""
-          echo "📝 Logs de CANARY:"
-          docker logs --tail 50 serviciudadcali-canary || true
+          if docker ps | grep serviciudadcali-canary; then
+            echo ""
+            echo "📝 Logs CANARY:"
+            docker logs --tail 50 serviciudadcali-canary 2>&1 || true
+          fi
 
       # ============================================================
-      # GUARDAR la imagen CANARY como STABLE para el próximo workflow
+      # Guardar imagen para próximo workflow
       # ============================================================
-      - name: 💾 Guardar imagen CANARY como STABLE para próximo despliegue
+      - name: 💾 Guardar imagen CANARY como STABLE
         if: success()
         run: |
-          # La imagen canary (que acaba de pasar todas las pruebas)
-          # se guardará como stable para el próximo workflow
+          echo "💾 Guardando imagen CANARY como STABLE para próximo workflow..."
+          
           docker tag serviciudadcali:canary serviciudadcali:stable
           
-          # Guardar en archivo tar.gz
           mkdir -p stable-image-new
           docker save serviciudadcali:stable | gzip > stable-image-new/serviciudadcali-stable.tar.gz
           
-          echo "✅ Imagen CANARY guardada como STABLE para próximo workflow"
+          FILE_SIZE=$(du -h stable-image-new/serviciudadcali-stable.tar.gz | cut -f1)
+          echo "✅ Imagen guardada (tamaño: $FILE_SIZE)"
 
-      - name: 📤 Subir imagen STABLE como artefacto persistente
+      - name: 📤 Subir artefacto STABLE
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -495,149 +523,87 @@ jobs:
           retention-days: 30
           overwrite: true
 
-      - name: 📋 Resumen de validación
+      - name: 📋 Resumen
         if: success()
         run: |
           if [ "${{ steps.check-stable.outputs.has_stable }}" == "true" ]; then
             echo "=========================================="
             echo "✅ VALIDACIÓN CANARY EXITOSA"
             echo "=========================================="
-            echo "🔗 STABLE (vieja): http://localhost:8080 ✅"
-            echo "🔗 CANARY (nueva): http://localhost:8081 ✅"
+            echo "🔗 STABLE (anterior): localhost:8080 ✅"
+            echo "🔗 CANARY (nueva): localhost:8081 ✅"
             echo ""
-            echo "📊 Resultado: CANARY pasó todos los tests"
-            echo "🚀 Listo para deploy a producción (Render)"
+            echo "✅ CANARY pasó todos los tests"
+            echo "🚀 Listo para producción"
           else
             echo "=========================================="
             echo "✅ PRIMER DESPLIEGUE EXITOSO"
             echo "=========================================="
-            echo "🔗 STABLE: http://localhost:8080 ✅"
+            echo "🔗 STABLE: localhost:8080 ✅"
             echo ""
-            echo "ℹ️  En el próximo push habrá despliegue Canary"
+            echo "ℹ️  Próximo push: Canary Deploy"
           fi
 
   # ==============================================================
-  # JOB 3: Deploy a Render (Producción)
+  # JOB 3: Deploy a Render
   # ==============================================================
   deploy-to-render:
-    name: 🚀 Deploy a Producción (Render)
+    name: 🚀 Deploy a Producción
     needs: [build-and-test, canary-validation]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/Vila'
     
     steps:
-      - name: 🔍 Verificar webhook configurado
+      - name: 🔍 Verificar webhook
         run: |
           if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            echo "❌ ERROR: RENDER_DEPLOY_HOOK_URL no está configurado"
-            echo "ℹ️  Configúralo en: Settings → Secrets → Actions"
+            echo "❌ RENDER_DEPLOY_HOOK_URL no configurado"
             exit 1
           fi
-          
-          echo "✅ Webhook URL configurado"
-          # Mostrar solo los primeros caracteres (seguridad)
-          echo "URL: ${RENDER_DEPLOY_HOOK_URL:0:30}..."
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          echo "✅ Webhook configurado"
 
-      - name: 🚀 Trigger Render Deploy
+      - name: 🚀 Trigger deploy
         run: |
           echo "🚀 Desplegando a Render..."
           echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
-          echo "🔗 Commit: ${{ github.sha }}"
           echo ""
           
-          # Hacer POST al webhook con más verbosidad
-          echo "📡 Enviando webhook a Render..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
           
-          response=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -w "\n%{http_code}" \
-            -v 2>&1)
+          echo "📊 Código HTTP: $HTTP_CODE"
           
-          # Mostrar respuesta completa (para debug)
-          echo "📊 Respuesta completa:"
-          echo "$response"
-          echo ""
-          
-          # Extraer código HTTP
-          http_code=$(echo "$response" | tail -n1)
-          
-          echo "📊 Código HTTP: $http_code"
-          
-          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ]; then
-            echo "✅ Deploy a Render iniciado exitosamente"
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "204" ]; then
+            echo "✅ Deploy iniciado"
           else
-            echo "❌ Error al iniciar deploy (código: $http_code)"
-            echo "ℹ️  Verifica:"
-            echo "   1. El webhook URL es correcto"
-            echo "   2. El servicio en Render existe"
-            echo "   3. El webhook no está deshabilitado"
+            echo "❌ Error (código: $HTTP_CODE)"
             exit 1
           fi
 
-      - name: ⏳ Esperar despliegue en Render
+      - name: ⏳ Esperar deploy
         run: |
-          echo "⏳ Esperando 180 segundos para que Render despliegue..."
-          echo "ℹ️  Render necesita:"
-          echo "   - Build Docker (2-3 min)"
-          echo "   - Deploy contenedor (1-2 min)"
-          echo "   - Iniciar Spring Boot (1-2 min)"
+          echo "⏳ Esperando 3 minutos..."
           sleep 180
 
-      - name: 🔍 Verificar deploy en Render
+      - name: 🔍 Verificar deploy
         continue-on-error: true
         run: |
-          echo "🔍 Verificando que la aplicación esté disponible en Render..."
+          echo "🔍 Verificando Render..."
           
-          RENDER_URL="https://serviciudadcali.onrender.com"
-          
-          MAX_RETRIES=15
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "⏳ Intento $i/$MAX_RETRIES..."
-            
-            if curl -f -v "${RENDER_URL}/actuator/health" 2>&1 | tee /tmp/curl-render.log; then
-              echo ""
-              echo "✅ Aplicación disponible en Render"
-              curl "${RENDER_URL}/actuator/health" | jq '.' || cat
+          for i in {1..10}; do
+            if curl -f https://serviciudadcali.onrender.com/actuator/health 2>/dev/null; then
+              echo "✅ Aplicación disponible"
               exit 0
             fi
-            
-            # Mostrar qué falló
-            if grep -q "Could not resolve host" /tmp/curl-render.log; then
-              echo "❌ ERROR DNS: No se pudo resolver el hostname"
-              echo "ℹ️  Verifica que el dominio de Render sea correcto"
-              break
-            elif grep -q "Connection refused" /tmp/curl-render.log; then
-              echo "⚠️  Conexión rechazada - Aplicación puede estar iniciando"
-            elif grep -q "Connection timed out" /tmp/curl-render.log; then
-              echo "⚠️  Timeout - Render puede estar desplegando"
-            fi
-            
-            if [ $i -lt $MAX_RETRIES ]; then
-              echo "⏳ Reintentando en 15s..."
-              sleep 15
-            fi
+            echo "⏳ Intento $i/10..."
+            sleep 15
           done
           
-          echo ""
-          echo "⚠️  No se pudo verificar el deploy automáticamente"
-          echo "ℹ️  Esto es normal - Render puede tardar más en plan gratuito"
-          echo "🔗 Verifica manualmente: $RENDER_URL/actuator/health"
+          echo "⚠️  Verificación timeout (normal en plan gratuito)"
 
-      - name: 🎉 Deploy completado
+      - name: 🎉 Completado
         run: |
           echo "=========================================="
           echo "🎉 PIPELINE COMPLETADO"
           echo "=========================================="
           echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
-          echo "🔗 Commit: ${{ github.sha }}"
           echo "🌐 URL: https://serviciudadcali.onrender.com"
-          echo ""
-          echo "✅ Pipeline ejecutado:"
-          echo "  1. ✅ Tests y cobertura validados"
-          echo "  2. ✅ Canary validado localmente"
-          echo "  3. ✅ Webhook a Render enviado"
-          echo ""
-          echo "⏰ Render tardará 5-10 minutos en desplegar"
-          echo "🔍 Verifica en: https://dashboard.render.com"
