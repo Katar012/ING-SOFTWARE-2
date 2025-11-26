@@ -247,7 +247,8 @@ jobs:
           # Verificar que MySQL esté listo
           echo "🔍 Verificando MySQL..."
           for i in {1..30}; do
-            if docker exec $(docker ps -q -f ancestor=mysql:8.0) mysqladmin ping -h localhost -proot --silent 2>/dev/null; then
+            if docker ps | grep mysql:8.0 > /dev/null && \
+               docker exec $(docker ps -q -f ancestor=mysql:8.0) mysqladmin ping -h localhost -proot --silent 2>/dev/null; then
               echo "✅ MySQL está listo"
               break
             fi
@@ -258,19 +259,22 @@ jobs:
           # La imagen nueva se convierte en STABLE
           docker tag serviciudadcali:canary serviciudadcali:stable
           
-          # Crear red para comunicación entre contenedores
-          docker network create app-network || true
-          
-          # Conectar MySQL a la red
+          # Obtener el ID del contenedor MySQL
           MYSQL_CONTAINER=$(docker ps -q -f ancestor=mysql:8.0)
-          docker network connect app-network $MYSQL_CONTAINER || true
           
-          # Desplegar como STABLE en puerto 8080
+          if [ -z "$MYSQL_CONTAINER" ]; then
+            echo "❌ ERROR: No se encontró contenedor MySQL"
+            docker ps -a
+            exit 1
+          fi
+          
+          echo "✅ MySQL container ID: $MYSQL_CONTAINER"
+          
+          # Desplegar usando --network host (más simple y confiable)
           docker run -d \
             --name serviciudadcali-stable \
-            --network app-network \
-            -p 8080:8080 \
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $MYSQL_CONTAINER):3306/acueducto \
+            --network host \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/acueducto \
             -e SPRING_DATASOURCE_USERNAME=root \
             -e SPRING_DATASOURCE_PASSWORD=root \
             -e SERVER_PORT=8080 \
@@ -283,13 +287,13 @@ jobs:
           docker ps
           
           # Esperar a que Spring Boot inicie
-          echo "⏳ Esperando 45 segundos para que Spring Boot inicie completamente..."
-          sleep 45
+          echo "⏳ Esperando 60 segundos para que Spring Boot inicie completamente..."
+          sleep 60
           
           # Mostrar logs iniciales
           echo ""
           echo "📝 Primeros logs de STABLE:"
-          docker logs --tail 30 serviciudadcali-stable
+          docker logs --tail 50 serviciudadcali-stable
 
       # ============================================================
       # Esperar inicialización (REDUCIR TIEMPO - ya esperamos 45s arriba)
