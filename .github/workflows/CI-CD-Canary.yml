@@ -2,9 +2,9 @@ name: CI/CD Pipeline con Despliegue Canary
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["main", "develop", "gomez"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "gomez"]
 
 # Permisos necesarios para GHCR
 permissions:
