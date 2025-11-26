@@ -118,7 +118,8 @@ jobs:
     name: 🕯️ Validación Canary
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # CAMBIO AQUÍ: Usar rama Vila en lugar de main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Vila'
     
     services:
       mysql:
@@ -181,7 +182,7 @@ jobs:
           cd ServiCiudadCali
           
           # Renombrar JAR para que coincida con Dockerfile
-          mv target/serviciudadcali-*.jar target/ServiCiudadCali-0.0.1-SNAPSHOT.jar
+          mv target/serviciudadcali-*.jar target/ServiCiudadCali-0.0.1-SNAPSHOT.jar || true
           
           # Build desde raíz (como en tu CI actual)
           cd ..
@@ -420,7 +421,8 @@ jobs:
     name: 🚀 Deploy a Producción (Render)
     needs: [build-and-test, canary-validation]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # CAMBIO AQUÍ: Usar rama Vila en lugar de main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Vila'
     
     steps:
       - name: 🚀 Trigger Render Deploy
@@ -471,7 +473,6 @@ jobs:
           echo "🎉 DEPLOY COMPLETADO EXITOSAMENTE"
           echo "=========================================="
           echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
-          echo "📊 Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
           echo "🔗 URL: https://serviciudadcali.onrender.com"
           echo ""
           echo "✅ Pipeline Canary completado:"
