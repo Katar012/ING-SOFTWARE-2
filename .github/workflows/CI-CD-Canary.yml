@@ -126,7 +126,7 @@ jobs:
     name: Build Docker Image
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gomez')
     
     steps:
       - name: 📥 Checkout código
@@ -198,7 +198,7 @@ jobs:
     name: Despliegue Canary
     needs: [build-and-test, build-docker-image]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gomez')
     
     steps:
       - name: 📥 Checkout código
@@ -502,7 +502,7 @@ jobs:
     name: Promover Canary a Producción
     needs: [build-and-test, canary-deploy]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gomez')
     # Nota: Requiere aprobación manual en GitHub Actions
     # Para activar, configurar environment 'production' en Settings > Environments
     
