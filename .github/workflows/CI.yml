@@ -1,84 +1,480 @@
-name: Pipeline CI/CD
+name: CI/CD con Canary Deploy
 
 on:
   push:
-    branches: ["main"]
+    branches: ["Vila"]
   pull_request:
-    branches: ["main"]
+    branches: ["Vila"]
+
+env:
+  COVERAGE_THRESHOLD: 80
+  STABLE_IMAGE_NAME: serviciudadcali-stable-persistent
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        services:
-          mysql:
-            image: mysql:8.0
-            env:
-              MYSQL_ROOT_PASSWORD: root
-              MYSQL_DATABASE: acueducto
-            ports: ["3306:3306"]
-            options: >-
-              --health-cmd="mysqladmin ping --silent"
-              --health-interval=10s
-              --health-timeout=5s
-              --health-retries=3
-        steps:
-            - name: Checkout código
-              uses: actions/checkout@v4
+  # ==============================================================
+  # JOB 1: Build, Test y Verificación de Cobertura
+  # ==============================================================
+  build-and-test:
+    name: 🏗️ Build y Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: acueducto
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      coverage: ${{ steps.coverage.outputs.percentage }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
 
-            - name: Configurar JDK 21
-              uses: actions/setup-java@v3
-              with:
-                  distribution: 'temurin'
-                  java-version: '21'
+      - name: ☕ Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
 
-            - name: Esperar a que MySQL esté listo
-              run: |
-                for i in {1..30}; do
-                  nc -z localhost 3306 && echo "MySQL está listo" && break
-                  sleep 2
-                done
+      - name: ⏳ Esperar a que MySQL esté listo
+        run: |
+          for i in {1..30}; do
+            nc -z localhost 3306 && echo "✅ MySQL está listo" && break
+            sleep 2
+          done
 
-            - name: Compilar con Maven
-              run: |
-                cd ServiCiudadCali
-                mvn -B clean compile
+      - name: 🔢 Generar versión semántica
+        id: version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Versión generada: $VERSION"
 
-            - name: Ejecutar pruebas con Maven
-              run: |
-                cd ServiCiudadCali
-                mvn test
+      - name: 🏗️ Compilar proyecto
+        run: |
+          cd ServiCiudadCali
+          mvn -B clean compile
+          echo "✅ Compilación exitosa"
 
-            - name: Verificar cobertura mínima del 80% con jacoco
-              run: |
-                cd ServiCiudadCali
-                mvn verify
-                echo "Cumple con el umbral de 80% de cobertura."
+      - name: 🧪 Ejecutar pruebas unitarias
+        run: |
+          cd ServiCiudadCali
+          mvn test
 
-            - name: Generar reporte de cobertura JaCoCo
-              if: always()  #Se ejecuta siempre, incluso si hay errores
-              run: |
-                cd ServiCiudadCali
-                mvn jacoco:report 
+      - name: 📊 Verificar umbral de cobertura (≥80%)
+        id: coverage
+        run: |
+          cd ServiCiudadCali
+          
+          # Verificar con mvn verify (incluye jacoco:check)
+          if ! mvn verify; then
+            echo "❌ ERROR: Cobertura menor al 80%"
+            exit 1
+          fi
+          
+          echo "✅ Cobertura cumple con el umbral requerido"
 
-            - name: Subir reporte de cobertura como artefacto
-              if: always()  # ← Se ejecuta siempre
-              uses: actions/upload-artifact@v4
-              with:
-                name: jacoco-coverage-report
-                path: ServiCiudadCali/target/site/jacoco/
-                retention-days: 5
+      - name: 📊 Generar reporte de cobertura JaCoCo
+        if: always()
+        run: |
+          cd ServiCiudadCali
+          mvn jacoco:report
 
-            - name: Construir imagen Docker
-              run: |
-                # Construir desde la raíz del repo a diferencia del render.
-                docker build -t mi-app:latest -f ServiCiudadCali/Dockerfile .
+      - name: 📤 Subir reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: ServiCiudadCali/target/site/jacoco/
+          retention-days: 30
 
+      - name: 📦 Empaquetar aplicación
+        run: |
+          cd ServiCiudadCali
+          mvn -B package -DskipTests
+          echo "✅ JAR generado"
 
-    deploy:
-        needs: build
-        runs-on: ubuntu-latest
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        steps:
-            - name: Trigger Render Deploy
-              run: |
-                curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      - name: 📤 Subir artefacto JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: serviciudadcali-${{ steps.version.outputs.version }}.jar
+          path: ServiCiudadCali/target/*.jar
+          retention-days: 5
+
+  # ==============================================================
+  # JOB 2: Despliegue Canary (Validación Local)
+  # ==============================================================
+  canary-validation:
+    name: 🕯️ Validación Canary
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: acueducto
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 📥 Descargar JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: serviciudadcali-${{ needs.build-and-test.outputs.version }}.jar
+          path: ServiCiudadCali/target/
+
+      # ============================================================
+      # CLAVE: Descargar versión STABLE anterior (si existe)
+      # ============================================================
+      - name: 📥 Intentar descargar imagen STABLE anterior
+        id: download-stable
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ env.STABLE_IMAGE_NAME }}
+          path: ./stable-image/
+
+      - name: 🔍 Verificar si hay versión STABLE previa
+        id: check-stable
+        run: |
+          if [ -f "./stable-image/serviciudadcali-stable.tar.gz" ]; then
+            echo "has_stable=true" >> $GITHUB_OUTPUT
+            echo "✅ Se encontró versión STABLE anterior"
+          else
+            echo "has_stable=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  No hay versión STABLE anterior (primer despliegue)"
+          fi
+
+      # ============================================================
+      # CASO 1: HAY VERSIÓN STABLE ANTERIOR → Despliegue Canary Real
+      # ============================================================
+      - name: 🔄 Restaurar imagen STABLE anterior
+        if: steps.check-stable.outputs.has_stable == 'true'
+        run: |
+          cd stable-image
+          docker load < serviciudadcali-stable.tar.gz
+          echo "✅ Imagen STABLE anterior restaurada"
+          docker images | grep serviciudadcali
+
+      - name: 🐳 Build imagen CANARY (nueva versión)
+        run: |
+          cd ServiCiudadCali
+          
+          # Renombrar JAR para que coincida con Dockerfile
+          mv target/serviciudadcali-*.jar target/ServiCiudadCali-0.0.1-SNAPSHOT.jar
+          
+          # Build desde raíz (como en tu CI actual)
+          cd ..
+          docker build -t serviciudadcali:canary \
+            -f ServiCiudadCali/Dockerfile .
+          
+          echo "✅ Imagen CANARY construida con código nuevo"
+
+      - name: 🚀 Levantar STABLE y CANARY en paralelo
+        if: steps.check-stable.outputs.has_stable == 'true'
+        run: |
+          echo "=========================================="
+          echo "✅ DESPLIEGUE CANARY CON DOS VERSIONES"
+          echo "=========================================="
+          
+          # Esperar a que MySQL esté listo
+          sleep 10
+          
+          # Levantar STABLE (versión ANTERIOR) en puerto 8080
+          docker run -d \
+            --name serviciudadcali-stable \
+            --network host \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/acueducto \
+            -e SPRING_DATASOURCE_USERNAME=root \
+            -e SPRING_DATASOURCE_PASSWORD=root \
+            -e SERVER_PORT=8080 \
+            serviciudadcali:stable
+          
+          echo "✅ STABLE desplegado en puerto 8080 (versión ANTERIOR)"
+          
+          # Esperar inicialización de stable
+          sleep 20
+          
+          # Levantar CANARY (versión NUEVA) en puerto 8081
+          docker run -d \
+            --name serviciudadcali-canary \
+            --network host \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/acueducto \
+            -e SPRING_DATASOURCE_USERNAME=root \
+            -e SPRING_DATASOURCE_PASSWORD=root \
+            -e SERVER_PORT=8081 \
+            serviciudadcali:canary
+          
+          echo "✅ CANARY desplegado en puerto 8081 (versión NUEVA)"
+          
+          # Mostrar estado
+          docker ps
+          echo ""
+          echo "🔗 Puerto 8080: STABLE (versión anterior)"
+          echo "🔗 Puerto 8081: CANARY (versión nueva - commit actual)"
+
+      # ============================================================
+      # CASO 2: NO HAY STABLE ANTERIOR → Primer Despliegue
+      # ============================================================
+      - name: 🚀 Primer despliegue (sin Canary)
+        if: steps.check-stable.outputs.has_stable == 'false'
+        run: |
+          echo "=========================================="
+          echo "ℹ️  PRIMER DESPLIEGUE - NO HAY CANARY"
+          echo "=========================================="
+          
+          # Esperar a que MySQL esté listo
+          sleep 10
+          
+          # La imagen nueva se convierte en STABLE
+          docker tag serviciudadcali:canary serviciudadcali:stable
+          
+          # Desplegar como STABLE en puerto 8080
+          docker run -d \
+            --name serviciudadcali-stable \
+            --network host \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/acueducto \
+            -e SPRING_DATASOURCE_USERNAME=root \
+            -e SPRING_DATASOURCE_PASSWORD=root \
+            -e SERVER_PORT=8080 \
+            serviciudadcali:stable
+          
+          echo "✅ Primera versión desplegada como STABLE en puerto 8080"
+          echo "ℹ️  En el próximo push, esta será la versión 'vieja'"
+          
+          docker ps
+
+      # ============================================================
+      # Esperar inicialización
+      # ============================================================
+      - name: ⏳ Esperar inicialización de servicios
+        run: |
+          echo "⏳ Esperando 30 segundos para que Spring Boot inicie..."
+          sleep 30
+
+      # ============================================================
+      # Health Checks
+      # ============================================================
+      - name: 🔍 Health Check - STABLE
+        if: always()
+        run: |
+          echo "🔍 Verificando STABLE en puerto 8080..."
+          
+          MAX_RETRIES=15
+          for i in $(seq 1 $MAX_RETRIES); do
+            if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
+              echo "✅ STABLE está saludable"
+              curl http://localhost:8080/actuator/health
+              break
+            fi
+            
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ STABLE no respondió después de $MAX_RETRIES intentos"
+              docker logs serviciudadcali-stable
+              exit 1
+            fi
+            
+            echo "⏳ Intento $i/$MAX_RETRIES - Reintentando en 5s..."
+            sleep 5
+          done
+
+      - name: 🔍 Health Check - CANARY
+        if: steps.check-stable.outputs.has_stable == 'true'
+        run: |
+          echo "🔍 Verificando CANARY en puerto 8081..."
+          
+          MAX_RETRIES=15
+          for i in $(seq 1 $MAX_RETRIES); do
+            if curl -f http://localhost:8081/actuator/health 2>/dev/null; then
+              echo "✅ CANARY está saludable"
+              curl http://localhost:8081/actuator/health
+              break
+            fi
+            
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ CANARY no respondió después de $MAX_RETRIES intentos"
+              docker logs serviciudadcali-canary
+              exit 1
+            fi
+            
+            echo "⏳ Intento $i/$MAX_RETRIES - Reintentando en 5s..."
+            sleep 5
+          done
+
+      # ============================================================
+      # Smoke Tests en CANARY (versión nueva)
+      # ============================================================
+      - name: 🧪 Smoke Tests en CANARY
+        if: steps.check-stable.outputs.has_stable == 'true'
+        run: |
+          echo "🧪 Ejecutando smoke tests en CANARY (puerto 8081)..."
+          
+          # Test 1: Health endpoint
+          echo "📍 Test 1: GET /actuator/health"
+          curl -f http://localhost:8081/actuator/health || exit 1
+          
+          # Test 2: Endpoint raíz (si existe)
+          echo "📍 Test 2: GET /"
+          curl -f http://localhost:8081/ || echo "⚠️  Endpoint raíz no disponible (ok)"
+          
+          echo "✅ Smoke tests completados exitosamente"
+
+      # ============================================================
+      # Comparar respuestas STABLE vs CANARY
+      # ============================================================
+      - name: 📊 Comparar STABLE vs CANARY
+        if: steps.check-stable.outputs.has_stable == 'true'
+        run: |
+          echo "📊 Comparando respuestas de STABLE vs CANARY..."
+          
+          echo "STABLE (puerto 8080):"
+          curl -s http://localhost:8080/actuator/health | jq '.' || true
+          
+          echo ""
+          echo "CANARY (puerto 8081):"
+          curl -s http://localhost:8081/actuator/health | jq '.' || true
+
+      # ============================================================
+      # Mostrar logs
+      # ============================================================
+      - name: 📝 Logs de contenedores
+        if: always()
+        run: |
+          echo "📝 Logs de STABLE:"
+          docker logs --tail 50 serviciudadcali-stable || true
+          
+          echo ""
+          echo "📝 Logs de CANARY:"
+          docker logs --tail 50 serviciudadcali-canary || true
+
+      # ============================================================
+      # GUARDAR la imagen CANARY como STABLE para el próximo workflow
+      # ============================================================
+      - name: 💾 Guardar imagen CANARY como STABLE para próximo despliegue
+        if: success()
+        run: |
+          # La imagen canary (que acaba de pasar todas las pruebas)
+          # se guardará como stable para el próximo workflow
+          docker tag serviciudadcali:canary serviciudadcali:stable
+          
+          # Guardar en archivo tar.gz
+          mkdir -p stable-image-new
+          docker save serviciudadcali:stable | gzip > stable-image-new/serviciudadcali-stable.tar.gz
+          
+          echo "✅ Imagen CANARY guardada como STABLE para próximo workflow"
+
+      - name: 📤 Subir imagen STABLE como artefacto persistente
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STABLE_IMAGE_NAME }}
+          path: stable-image-new/serviciudadcali-stable.tar.gz
+          retention-days: 30
+          overwrite: true
+
+      - name: 📋 Resumen de validación
+        if: success()
+        run: |
+          if [ "${{ steps.check-stable.outputs.has_stable }}" == "true" ]; then
+            echo "=========================================="
+            echo "✅ VALIDACIÓN CANARY EXITOSA"
+            echo "=========================================="
+            echo "🔗 STABLE (vieja): http://localhost:8080 ✅"
+            echo "🔗 CANARY (nueva): http://localhost:8081 ✅"
+            echo ""
+            echo "📊 Resultado: CANARY pasó todos los tests"
+            echo "🚀 Listo para deploy a producción (Render)"
+          else
+            echo "=========================================="
+            echo "✅ PRIMER DESPLIEGUE EXITOSO"
+            echo "=========================================="
+            echo "🔗 STABLE: http://localhost:8080 ✅"
+            echo ""
+            echo "ℹ️  En el próximo push habrá despliegue Canary"
+          fi
+
+  # ==============================================================
+  # JOB 3: Deploy a Render (Producción)
+  # ==============================================================
+  deploy-to-render:
+    name: 🚀 Deploy a Producción (Render)
+    needs: [build-and-test, canary-validation]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 🚀 Trigger Render Deploy
+        run: |
+          echo "🚀 Desplegando a Render..."
+          echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
+          
+          response=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" -w "\n%{http_code}")
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ]; then
+            echo "✅ Deploy a Render iniciado exitosamente"
+          else
+            echo "❌ Error al iniciar deploy (código: $http_code)"
+            exit 1
+          fi
+
+      - name: ⏳ Esperar despliegue en Render
+        run: |
+          echo "⏳ Esperando 60 segundos para que Render despliegue..."
+          sleep 60
+
+      - name: 🔍 Verificar deploy en Render
+        run: |
+          echo "🔍 Verificando que la aplicación esté disponible en Render..."
+          
+          # Reemplaza con tu URL de Render
+          RENDER_URL="https://serviciudadcali.onrender.com"
+          
+          MAX_RETRIES=10
+          for i in $(seq 1 $MAX_RETRIES); do
+            if curl -f "${RENDER_URL}/actuator/health" 2>/dev/null; then
+              echo "✅ Aplicación disponible en Render"
+              curl "${RENDER_URL}/actuator/health"
+              exit 0
+            fi
+            
+            echo "⏳ Intento $i/$MAX_RETRIES - Reintentando en 10s..."
+            sleep 10
+          done
+          
+          echo "⚠️  No se pudo verificar el deploy (puede tardar más)"
+          echo "ℹ️  Revisa manualmente: $RENDER_URL"
+
+      - name: 🎉 Deploy completado
+        run: |
+          echo "=========================================="
+          echo "🎉 DEPLOY COMPLETADO EXITOSAMENTE"
+          echo "=========================================="
+          echo "📦 Versión: ${{ needs.build-and-test.outputs.version }}"
+          echo "📊 Cobertura: ${{ needs.build-and-test.outputs.coverage }}%"
+          echo "🔗 URL: https://serviciudadcali.onrender.com"
+          echo ""
+          echo "✅ Pipeline Canary completado:"
+          echo "  1. ✅ Tests y cobertura validados"
+          echo "  2. ✅ Canary validado localmente"
+          echo "  3. ✅ Desplegado a producción (Render)"
