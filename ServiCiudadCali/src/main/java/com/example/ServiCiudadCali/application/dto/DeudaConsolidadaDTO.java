@@ -38,5 +38,6 @@ public class DeudaConsolidadaDTO {
         private final String periodo;
         private final int consumo;
         private final BigDecimal valorPagar;
+        
     }
 }
