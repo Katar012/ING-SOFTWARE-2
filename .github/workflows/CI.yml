@@ -244,17 +244,33 @@ jobs:
           echo "ℹ️  PRIMER DESPLIEGUE - NO HAY CANARY"
           echo "=========================================="
           
-          # Esperar a que MySQL esté listo
-          sleep 10
+          # Verificar que MySQL esté listo
+          echo "🔍 Verificando MySQL..."
+          for i in {1..30}; do
+            if docker exec $(docker ps -q -f ancestor=mysql:8.0) mysqladmin ping -h localhost -proot --silent 2>/dev/null; then
+              echo "✅ MySQL está listo"
+              break
+            fi
+            echo "⏳ Esperando MySQL... intento $i/30"
+            sleep 2
+          done
           
           # La imagen nueva se convierte en STABLE
           docker tag serviciudadcali:canary serviciudadcali:stable
           
+          # Crear red para comunicación entre contenedores
+          docker network create app-network || true
+          
+          # Conectar MySQL a la red
+          MYSQL_CONTAINER=$(docker ps -q -f ancestor=mysql:8.0)
+          docker network connect app-network $MYSQL_CONTAINER || true
+          
           # Desplegar como STABLE en puerto 8080
           docker run -d \
             --name serviciudadcali-stable \
-            --network host \
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/acueducto \
+            --network app-network \
+            -p 8080:8080 \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $MYSQL_CONTAINER):3306/acueducto \
             -e SPRING_DATASOURCE_USERNAME=root \
             -e SPRING_DATASOURCE_PASSWORD=root \
             -e SERVER_PORT=8080 \
@@ -263,39 +279,103 @@ jobs:
           echo "✅ Primera versión desplegada como STABLE en puerto 8080"
           echo "ℹ️  En el próximo push, esta será la versión 'vieja'"
           
+          # Mostrar estado
           docker ps
+          
+          # Esperar a que Spring Boot inicie
+          echo "⏳ Esperando 45 segundos para que Spring Boot inicie completamente..."
+          sleep 45
+          
+          # Mostrar logs iniciales
+          echo ""
+          echo "📝 Primeros logs de STABLE:"
+          docker logs --tail 30 serviciudadcali-stable
 
       # ============================================================
-      # Esperar inicialización
+      # Esperar inicialización (REDUCIR TIEMPO - ya esperamos 45s arriba)
       # ============================================================
       - name: ⏳ Esperar inicialización de servicios
         run: |
-          echo "⏳ Esperando 30 segundos para que Spring Boot inicie..."
-          sleep 30
+          echo "⏳ Esperando 15 segundos adicionales..."
+          sleep 15
 
       # ============================================================
-      # Health Checks
+      # Health Checks (MEJORADO con más información de debug)
       # ============================================================
       - name: 🔍 Health Check - STABLE
         if: always()
         run: |
           echo "🔍 Verificando STABLE en puerto 8080..."
           
-          MAX_RETRIES=15
+          # Verificar que el contenedor esté corriendo
+          if ! docker ps | grep serviciudadcali-stable; then
+            echo "❌ ERROR: Contenedor STABLE no está corriendo"
+            docker ps -a | grep serviciudadcali-stable
+            echo ""
+            echo "📝 Logs del contenedor:"
+            docker logs serviciudadcali-stable
+            exit 1
+          fi
+          
+          echo "✅ Contenedor STABLE está corriendo"
+          
+          # Verificar puertos
+          echo "🔍 Verificando puertos expuestos:"
+          docker port serviciudadcali-stable || true
+          netstat -tulpn | grep 8080 || true
+          
+          # Health checks con más tiempo e información
+          MAX_RETRIES=20
           for i in $(seq 1 $MAX_RETRIES); do
-            if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
+            echo "⏳ Intento $i/$MAX_RETRIES..."
+            
+            # Intentar curl con más verbose
+            if curl -v -f http://localhost:8080/actuator/health 2>&1 | tee /tmp/curl-output.txt; then
               echo "✅ STABLE está saludable"
-              curl http://localhost:8080/actuator/health
+              curl http://localhost:8080/actuator/health | jq '.' || cat
               break
             fi
             
+            # Mostrar qué falló
+            if grep -q "Connection refused" /tmp/curl-output.txt; then
+              echo "⚠️  Conexión rechazada - Spring Boot puede estar iniciando todavía"
+            elif grep -q "Empty reply" /tmp/curl-output.txt; then
+              echo "⚠️  Respuesta vacía - Servidor respondiendo pero endpoint no listo"
+            fi
+            
+            # Mostrar logs cada 5 intentos
+            if [ $((i % 5)) -eq 0 ]; then
+              echo ""
+              echo "📝 Últimos logs (intento $i):"
+              docker logs --tail 20 serviciudadcali-stable
+              echo ""
+            fi
+            
             if [ $i -eq $MAX_RETRIES ]; then
-              echo "❌ STABLE no respondió después de $MAX_RETRIES intentos"
+              echo ""
+              echo "❌ STABLE no respondió después de $MAX_RETRIES intentos (100 segundos)"
+              echo ""
+              echo "📊 Diagnóstico completo:"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              
+              echo "📝 Logs completos del contenedor:"
               docker logs serviciudadcali-stable
+              
+              echo ""
+              echo "🔍 Estado del contenedor:"
+              docker inspect serviciudadcali-stable
+              
+              echo ""
+              echo "🌐 Información de red:"
+              docker network inspect app-network || true
+              
+              echo ""
+              echo "📊 Procesos en el contenedor:"
+              docker top serviciudadcali-stable || true
+              
               exit 1
             fi
             
-            echo "⏳ Intento $i/$MAX_RETRIES - Reintentando en 5s..."
             sleep 5
           done
 
